@@ -184,6 +184,20 @@ function Copy-Binary {
   Copy-Item -LiteralPath $binarySrc -Destination (Join-Path $DestDir "$AppName.exe") -Force
 }
 
+function Install-ManPage {
+  param([string]$AppRoot)
+
+  if (-not (Test-Path -LiteralPath $ManSrc)) {
+    Write-WarningLine "Man page not found at $ManSrc, skipping."
+    return
+  }
+
+  $manDir = Join-Path $AppRoot "man\man1"
+  New-Item -ItemType Directory -Path $manDir -Force | Out-Null
+  Copy-Item -LiteralPath $ManSrc -Destination (Join-Path $manDir "nailsnake.1") -Force
+  Write-Success "Man page installed."
+}
+
 function Write-Manifest {
   param(
     [string]$AppRoot,
@@ -294,6 +308,7 @@ function Show-InstallSummary {
   Write-Info "Installed application: $AppRoot"
   Write-Info "System command: $AppName"
   Write-Info "Launcher paths: $($LauncherPaths -join ', ')"
+  Write-Info "Man page: $AppRoot\man\man1\$AppName.1"
 }
 
 function Install-Application {
@@ -322,6 +337,7 @@ function Install-Application {
     Build-Release
     Copy-Binary -DestDir $stageBin
     Write-Manifest -AppRoot $stageRoot -InstallMode $InstallMode
+    Install-ManPage -AppRoot $stageRoot
 
     if (Test-Path -LiteralPath $TargetRoot) {
       Move-Item -LiteralPath $TargetRoot -Destination $backupRoot -Force

@@ -24,6 +24,8 @@ TEST_BASE="$SCRIPT_DIR/test-root"
 TEST_ROOT="$TEST_BASE/$APP_NAME"
 TEST_BIN_DIR="$TEST_BASE/bin"
 TEST_LAUNCHER="$TEST_BIN_DIR/$APP_NAME"
+MAN_PAGE_DEST="$INSTALL_ROOT/man/man1/$APP_NAME.1"
+MAN_SRC="$REPO_ROOT/man/$APP_NAME.1"
 MANIFEST_NAME=".nailsnake-install.json"
 MODE="${1:-install}"
 TERMUX_BIN_DIR="$PREFIX/bin"
@@ -162,6 +164,20 @@ EOF
   run_cmd chmod +x "$launcher_path"
 }
 
+install_man_page() {
+  if [ -f "$MAN_SRC" ]; then
+    run_cmd mkdir -p "$(dirname "$MAN_PAGE_DEST")"
+    run_cmd cp "$MAN_SRC" "$MAN_PAGE_DEST"
+    run_cmd chmod 644 "$MAN_PAGE_DEST"
+    if command -v mandb >/dev/null 2>&1; then
+      mandb -q 2>/dev/null || true
+    fi
+    ok "Man page installed."
+  else
+    warn "Man page source not found at $MAN_SRC, skipping."
+  fi
+}
+
 termux_install_to_prefix() {
   info "Symlinking to Termux prefix: $TERMUX_BIN_DIR/$APP_NAME"
   run_cmd mkdir -p "$TERMUX_BIN_DIR"
@@ -194,6 +210,7 @@ show_install_summary() {
   info "Installed application: $app_root"
   info "System command: $APP_NAME"
   info "Launcher paths: $launcher_paths"
+  info "Man page: $app_root/man/man1/$APP_NAME.1"
   info "The binary is also available at $TERMUX_BIN_DIR/$APP_NAME"
 }
 
@@ -234,6 +251,8 @@ deploy_install() {
     [ -d "$backup_root" ] && mv "$backup_root" "$target_root"
     fail "Unable to create launcher in $(dirname "$launcher_path")."
   fi
+
+  install_man_page
 
   if [ "$add_to_prefix" = "yes" ]; then
     termux_install_to_prefix

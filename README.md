@@ -29,7 +29,7 @@ lightweight GUI without ever leaving your terminal.
 | **Difficulty presets** | Chill, Normal, Hard, Insane — each with progressive speed-up |
 | **Wrap mode** | Optional wall-wrapping instead of instant death |
 | **Persistent stats** | High score saved per OS config directory (see below) |
-| **Manual page** | `man nailsnake` after installing the man page (man-db on Linux) |
+| **Manual page** | `man nailsnake` after installing the man page |
 
 ---
 
@@ -46,7 +46,7 @@ cargo install --path .
 ### Linux / macOS — binary + man page
 
 ```bash
-make install                    # /usr/local/bin + man page + mandb
+make install                    # /usr/local/bin + man page
 # user-local (no root):
 PREFIX=$HOME/.local make install
 export MANPATH="$HOME/.local/share/man:${MANPATH:-}"
@@ -149,21 +149,7 @@ man nailsnake
 - **Terminal** at least **60×22** characters
 - **Interactive TTY** (not a piped or scripted session)
 
-### Windows build note
 
-If `link.exe` is missing (no Visual Studio C++ Build Tools), use the GNU
-toolchain with Scoop MinGW:
-
-```powershell
-rustup toolchain install stable-x86_64-pc-windows-gnu
-$env:Path = "$env:USERPROFILE\scoop\apps\mingw\current\bin;" + $env:Path
-cargo +stable-x86_64-pc-windows-gnu build --release
-.\target\release\nailsnake.exe
-```
-
-The project `.cargo/config.toml` already points the GNU linker at MinGW.
-
----
 
 ## Contributing
 

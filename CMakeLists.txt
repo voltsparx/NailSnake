@@ -80,6 +80,25 @@ if(MAN1_DEST)
     DESTINATION "${MAN1_DEST}"
     PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
   )
+
+  get_filename_component(MAN_DIR "${MAN1_DEST}" DIRECTORY)
+  install(CODE "
+    find_program(MANDB mandb QUIET)
+    if(MANDB)
+      execute_process(COMMAND \${MANDB} -q \"${MAN_DIR}\"
+        COMMAND_ERROR_IS_FATAL LAST
+      )
+      message(STATUS \"man-db cache updated\")
+    elseif(CMAKE_HOST_APPLE)
+      find_program(MAKEWHATIS makewhatis QUIET)
+      if(MAKEWHATIS)
+        execute_process(COMMAND \${MAKEWHATIS} \"${MAN1_DEST}\"
+          COMMAND_ERROR_IS_FATAL LAST
+        )
+        message(STATUS \"makewhatis cache updated\")
+      endif()
+    endif()
+  ")
 endif()
 
 # --- Packaging ---
