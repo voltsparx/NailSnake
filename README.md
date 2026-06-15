@@ -132,7 +132,7 @@ cargo +stable-x86_64-pc-windows-gnu build --release
 
 The project `.cargo/config.toml` already points the GNU linker at MinGW.
 
-## Atribution
+## Attribution
 
 **Author:** Voltsparx · **Contact:** [voltsparx@gmail.com](mailto:voltsparx@gmail.com)
 
