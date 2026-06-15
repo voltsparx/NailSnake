@@ -2,8 +2,6 @@
 
 A polished, full-screen terminal snake game written in Rust. NailSnake runs on **Windows**, **Linux**, and **macOS** using the alternate screen buffer and raw mode input — the same approach as vim/neovim — so it feels like a lightweight GUI while staying pure CLI.
 
-**Author:** Voltsparx · **Contact:** [voltsparx@gmail.com](mailto:voltsparx@gmail.com)
-
 Inspired by [nsnake](https://github.com/alexdantas/nSnake), rebuilt with Rust safety, richer colors, persistent high scores, and a `man` manual page.
 
 ## Features
@@ -133,6 +131,10 @@ cargo +stable-x86_64-pc-windows-gnu build --release
 ```
 
 The project `.cargo/config.toml` already points the GNU linker at MinGW.
+
+## Atribution
+
+**Author:** Voltsparx · **Contact:** [voltsparx@gmail.com](mailto:voltsparx@gmail.com)
 
 ## License
 
