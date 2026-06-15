@@ -1,0 +1,174 @@
+.\" NailSnake manual page — compatible with man-db and BSD man(1).
+.TH NAILSNAKE 1 "June 2026" "NailSnake 1.0.0" "User Commands"
+.SH NAME
+nailsnake \- full-screen terminal Snake game with rich colors
+.SH SYNOPSIS
+.B nailsnake
+[\fIOPTIONS\fR]
+.SH DESCRIPTION
+.B NailSnake
+is a cross-platform command-line Snake game for Windows, Linux, and macOS.
+It uses the terminal alternate screen and raw keyboard input (similar to
+.BR vim (1)
+or
+.BR nvim (1))
+to provide a responsive, GUI-like experience entirely inside the shell.
+.PP
+The playfield is drawn with
+.BR ratatui (7)
+and
+.BR crossterm (7),
+with automatic color detection for truecolor, 256-color, and basic ANSI
+terminals. High scores and game counts are saved under the user configuration
+directory for your operating system.
+.SH OPTIONS
+.TP
+.BR \-d ", " \-\-difficulty " " \fIMODE\fR
+Set difficulty preset affecting base snake speed.
+\fIMODE\fR may be
+.IR chill ,
+.IR normal ,
+.IR hard ,
+or
+.IR insane
+(default:
+.IR normal ).
+.TP
+.BR \-w ", " \-\-wrap
+Enable wall wrapping: leaving one edge re-enters on the opposite side
+instead of ending the game.
+.TP
+.BR \-c ", " \-\-color " " \fITYPE\fR
+Force color mode:
+.IR auto ,
+.IR truecolor ,
+.IR 256 ,
+or
+.IR basic
+(default:
+.IR auto ).
+.TP
+.BR \-g ", " \-\-grid
+Draw faint grid dots on the playfield.
+.TP
+.BR \-h ", " \-\-help
+Print help information and exit.
+.TP
+.BR \-V ", " \-\-version
+Print version information and exit.
+.SH CONTROLS
+.TP
+.B Enter
+Start the game from the title screen.
+.TP
+.B Arrow keys
+Move the snake.
+.TP
+.B WASD
+Alternative movement keys.
+.TP
+.B Space
+Pause or resume.
+.TP
+.B R
+Restart the current round.
+.TP
+.B Q
+.B Esc
+Quit and restore the terminal.
+.TP
+.B Ctrl+c
+Force quit (terminal is restored).
+.SH FILES
+.TP
+.I Linux / BSD
+~/.config/NailSnake/stats.json
+.TP
+.I macOS
+~/Library/Application Support/NailSnake/stats.json
+.TP
+.I Windows
+%APPDATA%\\NailSnake\\stats.json
+.PP
+These files store the high score and total games played.
+.SH ENVIRONMENT
+.TP
+.B COLORTERM
+When set to
+.I truecolor
+or
+.IR 24bit ,
+enables RGB color output.
+.TP
+.B TRUECOLOR
+If present, enables truecolor mode.
+.TP
+.B TERM
+Terminal type; values containing
+.I 256
+or
+.I xterm
+hint at 256-color support.
+.TP
+.B WT_SESSION
+Set by Windows Terminal; helps auto-detect modern color support on Windows.
+.SH EXAMPLES
+Start a normal game:
+.PP
+.RS
+.nf
+nailsnake
+.fi
+.RE
+.PP
+Hard mode with wall wrap and visible grid:
+.PP
+.RS
+.nf
+nailsnake \-\-difficulty hard \-\-wrap \-\-grid
+.fi
+.RE
+.PP
+Force 256-color palette on older terminals:
+.PP
+.RS
+.nf
+nailsnake \-\-color 256
+.fi
+.RE
+.SH INSTALLATION
+Build and run from source with
+.BR cargo (1):
+.PP
+.RS
+.nf
+cargo install \-\-path .
+.fi
+.RE
+.PP
+Install the manual page (Linux/macOS, requires root or write access to the man path):
+.PP
+.RS
+.nf
+make install-man
+.fi
+.RE
+.PP
+Then view this page with:
+.PP
+.RS
+.nf
+man nailsnake
+.fi
+.RE
+.SH SEE ALSO
+.BR nsnake (6),
+.BR vim (1),
+.BR cargo (1)
+.SH AUTHOR
+Voltsparx \(la voltsparx@gmail.com \(ra
+.SH COPYRIGHT
+Copyright \(co 2026 Voltsparx.
+License MIT.
+.SH BUGS
+Report issues to Voltsparx at voltsparx@gmail.com.
