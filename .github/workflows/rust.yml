@@ -94,35 +94,73 @@ jobs:
             exit 1
           fi
 
-  release:
-    name: Create Release
+  build-binaries:
+    name: Build (${{ matrix.target }})
     needs: [lint, test, check-man-page, check-cargo-metadata]
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+            rust_toolchain: stable-x86_64-pc-windows-gnu
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust_toolchain || 'stable' }}
+          targets: ${{ matrix.target }}
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }} --verbose
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nailsnake-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/nailsnake*
+          retention-days: 1
+
+  create-release:
+    name: Create Release
+    needs: build-binaries
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Build release binaries
-        run: |
-          for target in x86_64-unknown-linux-gnu x86_64-apple-darwin x86_64-pc-windows-msvc x86_64-pc-windows-gnu; do
-            rustup target add $target
-            cargo build --release --target $target
-          done
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
       - name: Prepare release artifacts
         run: |
-          mkdir -p dist
-          cp target/x86_64-unknown-linux-gnu/release/nailsnake dist/nailsnake-linux-x86_64
-          cp target/x86_64-apple-darwin/release/nailsnake dist/nailsnake-macos-x86_64
-          cp target/x86_64-pc-windows-msvc/release/nailsnake.exe dist/nailsnake-windows-msvc-x86_64.exe
-          cp target/x86_64-pc-windows-gnu/release/nailsnake.exe dist/nailsnake-windows-gnu-x86_64.exe
-          cp man/nailsnake.1 dist/
-          sha256sum dist/* > dist/SHA256SUMS
+          mkdir -p final
+          # Linux
+          cp dist/nailsnake-x86_64-unknown-linux-gnu/nailsnake final/nailsnake-linux-x86_64
+          # macOS (binary has no extension)
+          cp dist/nailsnake-x86_64-apple-darwin/nailsnake final/nailsnake-macos-x86_64
+          # Windows MSVC
+          cp dist/nailsnake-x86_64-pc-windows-msvc/nailsnake.exe final/nailsnake-windows-msvc-x86_64.exe 2>/dev/null || true
+          cp dist/nailsnake-x86_64-pc-windows-msvc/*.pdb final/ 2>/dev/null || true
+          # Windows GNU
+          cp dist/nailsnake-x86_64-pc-windows-gnu/nailsnake.exe final/nailsnake-windows-gnu-x86_64.exe 2>/dev/null || true
+          cp dist/nailsnake-x86_64-pc-windows-gnu/*.pdb final/ 2>/dev/null || true
+          # Man page
+          cp man/nailsnake.1 final/
+          # Checksums
+          cd final
+          sha256sum * > SHA256SUMS
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: final/*
           generate_release_notes: true
           draft: false
           prerelease: false

@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
-use nailsnake::{Direction, Game, GamePhase, Point};
 use nailsnake::config::Difficulty;
+use nailsnake::{Direction, Game, GamePhase, Point};
 
 /// Smoke test: play random moves until the game ends or we've taken 100 ticks.
 /// Verifies that the game loop doesn't panic or hang.
@@ -78,7 +78,12 @@ fn food_never_spawns_on_snake_body() {
 
 fn good_dir(_game: &Game) -> Direction {
     use rand::seq::SliceRandom;
-    let dirs = [Direction::Up, Direction::Down, Direction::Left, Direction::Right];
+    let dirs = [
+        Direction::Up,
+        Direction::Down,
+        Direction::Left,
+        Direction::Right,
+    ];
     *dirs.choose(&mut rand::thread_rng()).unwrap()
 }
 
@@ -91,10 +96,7 @@ fn score_accumulates_over_multiple_food_eaten() {
     let initial_score = game.score;
     for _ in 0..5 {
         if let Some(h) = game.snake.front().copied() {
-            game.food = Point {
-                x: h.x + 1,
-                y: h.y,
-            };
+            game.food = Point { x: h.x + 1, y: h.y };
         }
         game.pending_direction = Direction::Right;
         game.tick();

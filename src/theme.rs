@@ -112,16 +112,26 @@ impl Theme {
     fn ansi256() -> Self {
         Self {
             border: Style::default().fg(Color::Green),
-            title: Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
-            status_bar: Style::default().bg(Color::Indexed(236)).fg(Color::Indexed(252)),
-            sidebar: Style::default().bg(Color::Indexed(235)).fg(Color::Indexed(252)),
-            sidebar_title: Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            title: Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+            status_bar: Style::default()
+                .bg(Color::Indexed(236))
+                .fg(Color::Indexed(252)),
+            sidebar: Style::default()
+                .bg(Color::Indexed(235))
+                .fg(Color::Indexed(252)),
+            sidebar_title: Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
             score: Style::default().fg(Color::LightGreen),
             score_high: Style::default()
                 .fg(Color::LightYellow)
                 .add_modifier(Modifier::BOLD),
             help: Style::default().fg(Color::DarkGray),
-            help_key: Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
+            help_key: Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
             food: Style::default()
                 .fg(Color::Red)
                 .bg(Color::Indexed(52))
@@ -137,7 +147,9 @@ impl Theme {
             paused: Style::default()
                 .fg(Color::LightYellow)
                 .add_modifier(Modifier::BOLD),
-            game_over: Style::default().fg(Color::LightRed).add_modifier(Modifier::BOLD),
+            game_over: Style::default()
+                .fg(Color::LightRed)
+                .add_modifier(Modifier::BOLD),
             message: Style::default().fg(Color::Gray),
         }
     }
@@ -149,16 +161,22 @@ impl Theme {
     fn basic() -> Self {
         Self {
             border: Style::default().fg(Color::Green),
-            title: Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+            title: Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
             status_bar: Style::default().fg(Color::White),
             sidebar: Style::default().fg(Color::White),
-            sidebar_title: Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            sidebar_title: Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
             score: Style::default().fg(Color::Green),
             score_high: Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
             help: Style::default().fg(Color::DarkGray),
-            help_key: Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
+            help_key: Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
             food: Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
             snake_head: Style::default()
                 .fg(Color::Black)

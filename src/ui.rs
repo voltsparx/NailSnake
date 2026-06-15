@@ -43,13 +43,7 @@ pub fn compute_layout(area: Rect) -> LayoutAreas {
 
 /// Draw one complete frame: the game board, info sidebar, status bar, and any
 /// active overlay (pause, game-over, or title screen).
-pub fn render(
-    frame: &mut Frame,
-    game: &Game,
-    config: &GameConfig,
-    theme: &Theme,
-    os_label: &str,
-) {
+pub fn render(frame: &mut Frame, game: &Game, config: &GameConfig, theme: &Theme, os_label: &str) {
     let areas = compute_layout(frame.area());
 
     render_board(frame, game, areas.board, theme, config.show_grid);
@@ -89,13 +83,7 @@ pub fn render(
 ///
 /// Each logical game cell is drawn as a `cell_w × cell_h` character block so
 /// the board always fills the available space, even at different terminal sizes.
-fn render_board(
-    frame: &mut Frame,
-    game: &Game,
-    area: Rect,
-    theme: &Theme,
-    show_grid: bool,
-) {
+fn render_board(frame: &mut Frame, game: &Game, area: Rect, theme: &Theme, show_grid: bool) {
     let inner = inset(area, 1);
     let board_w = inner.width;
     let board_h = inner.height;
@@ -144,14 +132,7 @@ fn render_board(
     }
 
     draw_cell(
-        frame,
-        offset_x,
-        offset_y,
-        game.food,
-        cell_w,
-        cell_h,
-        theme.food,
-        "♦",
+        frame, offset_x, offset_y, game.food, cell_w, cell_h, theme.food, "♦",
     );
 }
 
@@ -247,10 +228,7 @@ fn render_sidebar(
         Line::from(""),
         Line::from(vec![
             Span::raw("Best  "),
-            Span::styled(
-                format!("{}", config.stats.high_score),
-                theme.score_high,
-            ),
+            Span::styled(format!("{}", config.stats.high_score), theme.score_high),
         ]),
         Line::from(vec![
             Span::raw("Len   "),
@@ -293,7 +271,9 @@ fn render_sidebar(
         Line::from(Span::styled("man nailsnake", theme.help_key)),
     ];
     frame.render_widget(
-        Paragraph::new(help).style(theme.sidebar).wrap(Wrap { trim: true }),
+        Paragraph::new(help)
+            .style(theme.sidebar)
+            .wrap(Wrap { trim: true }),
         chunks[2],
     );
 }
@@ -359,7 +339,10 @@ fn render_overlay(
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(theme.border)
-        .title(Span::styled(title, title_style.add_modifier(Modifier::BOLD)))
+        .title(Span::styled(
+            title,
+            title_style.add_modifier(Modifier::BOLD),
+        ))
         .style(theme.overlay);
 
     let inner = block.inner(popup_area);

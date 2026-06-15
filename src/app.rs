@@ -122,7 +122,9 @@ impl App {
     /// If the remap results in a self-intersecting snake or food-on-snake, we
     /// fall back to a fresh game (preserving the current phase).
     fn handle_resize(&mut self, width: u16, height: u16) -> Result<()> {
-        if width < nailsnake::platform::MIN_TERM_WIDTH || height < nailsnake::platform::MIN_TERM_HEIGHT {
+        if width < nailsnake::platform::MIN_TERM_WIDTH
+            || height < nailsnake::platform::MIN_TERM_HEIGHT
+        {
             return Ok(());
         }
 
@@ -131,7 +133,12 @@ impl App {
         let phase = self.game.phase;
 
         if !self.game.resize(board_w, board_h) {
-            self.game = Game::new(board_w, board_h, self.config.difficulty, self.config.wrap_walls);
+            self.game = Game::new(
+                board_w,
+                board_h,
+                self.config.difficulty,
+                self.config.wrap_walls,
+            );
             self.game.phase = phase;
         } else {
             self.game.phase = phase;

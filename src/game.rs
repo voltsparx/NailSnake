@@ -210,11 +210,7 @@ impl Game {
             } else if ny >= self.height as i16 {
                 ny = 0;
             }
-        } else if nx < 0
-            || ny < 0
-            || nx >= self.width as i16
-            || ny >= self.height as i16
-        {
+        } else if nx < 0 || ny < 0 || nx >= self.width as i16 || ny >= self.height as i16 {
             self.phase = GamePhase::GameOver;
             return true;
         }
@@ -281,10 +277,7 @@ mod tests {
         game.phase = GamePhase::Running;
         let initial_len = game.snake.len();
         if let Some(h) = game.snake.front() {
-            game.food = Point {
-                x: h.x + 1,
-                y: h.y,
-            };
+            game.food = Point { x: h.x + 1, y: h.y };
         }
         game.pending_direction = Direction::Right;
         game.tick();

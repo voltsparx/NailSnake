@@ -6,16 +6,6 @@
 [![Tests](https://img.shields.io/badge/tests-12%2F12-passing-brightgreen)](https://github.com/voltsparx/NailSnake/actions)
 [![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20|%20Linux%20|%20macOS-blue)]()
 
-```
-      ╔══════════════════════════════════════╗
-      ║   ____       _ _  ____             _ ║
-      ║  |  _ \ __ _(_) |/ ___| _ __  ___| |║
-      ║  | | | / _` | | |\___ \| '_ \/ __| |║
-      ║  | |_| | (_| | | | ___) | | | \__ \_|║
-      ║  |____/ \__,_|_|_||____/|_| |_|___(_)║
-      ╚══════════════════════════════════════╝
-```
-
 A polished, full-screen terminal snake game written in Rust.  NailSnake runs on
 **Windows**, **Linux**, and **macOS** — dropping you into the alternate screen
 buffer with raw keyboard input, just like vim or neovim.  It *feels* like a
