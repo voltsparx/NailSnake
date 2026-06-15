@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::theme::ColorMode;
 
+/// Difficulty presets.  Each variant maps to a base tick interval (in ms) that
+/// determines how fast the snake moves.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Difficulty {
     Chill,
@@ -17,6 +19,11 @@ pub enum Difficulty {
 }
 
 impl Difficulty {
+    /// Base interval between game ticks, in milliseconds.
+    ///
+    /// Chill = 180 ms (~5.5 tps), Normal = 130 ms (~7.7 tps),
+    /// Hard = 90 ms (~11 tps), Insane = 55 ms (~18 tps).
+    /// The actual interval shrinks as the player eats food (see `Game::tick_interval_ms`).
     pub fn tick_ms(&self) -> u64 {
         match self {
             Difficulty::Chill => 180,
@@ -36,12 +43,15 @@ impl Difficulty {
     }
 }
 
+/// On-disk statistics, serialized as JSON.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct PersistedStats {
     pub high_score: u32,
     pub games_played: u32,
 }
 
+/// Runtime configuration assembled from CLI flags, persisted stats, and
+/// the detected terminal colour capability.
 #[derive(Debug, Clone)]
 pub struct GameConfig {
     pub difficulty: Difficulty,
@@ -71,7 +81,8 @@ impl GameConfig {
         })
     }
 
-    pub fn save_stats(&self) -> Result<()> {
+    /// Persist current stats to disk as JSON.
+    fn save_stats(&self) -> Result<()> {
         if let Some(parent) = self.stats_path.parent() {
             fs::create_dir_all(parent)
                 .with_context(|| format!("creating stats dir {}", parent.display()))?;
@@ -82,6 +93,8 @@ impl GameConfig {
         Ok(())
     }
 
+    /// Record a finished game.  Updates high score if applicable and persists.
+    /// Returns `true` if a new high score was set.
     pub fn record_game(&mut self, score: u32) -> Result<bool> {
         self.stats.games_played += 1;
         let new_record = score > self.stats.high_score;
@@ -93,6 +106,11 @@ impl GameConfig {
     }
 }
 
+/// Resolve the platform-appropriate stats file path.
+///
+/// Uses the `directories` crate which follows the XDG spec on Linux, the
+/// macOS convention, and the `%APPDATA%` pattern on Windows — all without
+/// conditional compilation.
 fn stats_file_path() -> Result<PathBuf> {
     let dirs = ProjectDirs::from("", "", "NailSnake")
         .context("could not resolve config directory for NailSnake")?;

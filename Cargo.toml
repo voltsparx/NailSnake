@@ -17,6 +17,10 @@ include = [
     "README.md",
 ]
 
+[lib]
+name = "nailsnake"
+path = "src/lib.rs"
+
 [[bin]]
 name = "nailsnake"
 path = "src/main.rs"

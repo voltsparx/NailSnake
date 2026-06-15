@@ -5,6 +5,9 @@ use crossterm::tty::IsTty;
 
 use crate::theme::ColorMode;
 
+/// Target operating system, determined at compile time via `cfg!`.
+///
+/// We use this for platform-specific colour detection and stats path hints.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Os {
     Windows,
@@ -38,6 +41,10 @@ pub fn os_label() -> &'static str {
 pub const MIN_TERM_WIDTH: u16 = 60;
 pub const MIN_TERM_HEIGHT: u16 = 22;
 
+/// Refuse to run if stdout is piped, redirected, or otherwise non-interactive.
+///
+/// The game needs raw mode and an alternate screen — neither works in a CI
+/// log or a file redirect.
 pub fn ensure_interactive_terminal() -> Result<()> {
     if !stdout().is_tty() {
         bail!(
@@ -59,6 +66,11 @@ pub fn ensure_terminal_size(width: u16, height: u16) -> Result<()> {
     Ok(())
 }
 
+/// Detect the terminal's colour capability.
+///
+/// When `requested` is `Auto`, we probe environment variables (`COLORTERM`,
+/// `TERM`, `TRUECOLOR`) and fall back to platform defaults.  Modern Windows
+/// Terminal advertises `WT_SESSION`, which we treat as a truecolor signal.
 pub fn detect_color_mode(requested: ColorMode) -> ColorMode {
     if requested != ColorMode::Auto {
         return requested;
@@ -74,7 +86,6 @@ pub fn detect_color_mode(requested: ColorMode) -> ColorMode {
 
     match current_os() {
         Os::Windows => {
-            // Modern Windows Terminal and ConPTY generally support 256/truecolor.
             if std::env::var("WT_SESSION").is_ok()
                 || std::env::var("TERM_PROGRAM")
                     .map(|v| v.eq_ignore_ascii_case("WindowsTerminal"))

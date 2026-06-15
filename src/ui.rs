@@ -9,14 +9,17 @@ use crate::game::{Game, GamePhase, Point};
 use crate::platform::stats_hint;
 use crate::theme::Theme;
 
+/// Width reserved for the right-hand info sidebar.
 pub const SIDEBAR_WIDTH: u16 = 28;
 
+/// Pre-computed layout areas refreshed each frame.
 pub struct LayoutAreas {
     pub board: Rect,
     pub sidebar: Rect,
     pub status: Rect,
 }
 
+/// Split the terminal area into board, sidebar, and status bar regions.
 pub fn compute_layout(area: Rect) -> LayoutAreas {
     let outer = Layout::default()
         .direction(Direction::Vertical)
@@ -38,6 +41,8 @@ pub fn compute_layout(area: Rect) -> LayoutAreas {
     }
 }
 
+/// Draw one complete frame: the game board, info sidebar, status bar, and any
+/// active overlay (pause, game-over, or title screen).
 pub fn render(
     frame: &mut Frame,
     game: &Game,
@@ -80,6 +85,10 @@ pub fn render(
     }
 }
 
+/// Render the playfield: border, optional grid dots, snake segments, food.
+///
+/// Each logical game cell is drawn as a `cell_w × cell_h` character block so
+/// the board always fills the available space, even at different terminal sizes.
 fn render_board(
     frame: &mut Frame,
     game: &Game,
@@ -182,6 +191,7 @@ fn draw_cell(
     frame.render_widget(cell, rect);
 }
 
+/// Map a logical board coordinate to a pixel (character-cell) rectangle.
 fn cell_rect(ox: u16, oy: u16, point: Point, cw: u16, ch: u16) -> Rect {
     Rect {
         x: ox + point.x * cw,
@@ -191,6 +201,7 @@ fn cell_rect(ox: u16, oy: u16, point: Point, cw: u16, ch: u16) -> Rect {
     }
 }
 
+/// Shrink a rectangle by `pad` units on each side.
 fn inset(area: Rect, pad: u16) -> Rect {
     Rect {
         x: area.x + pad,
@@ -200,6 +211,7 @@ fn inset(area: Rect, pad: u16) -> Rect {
     }
 }
 
+/// Render the right-hand info panel: score, session stats, controls help.
 fn render_sidebar(
     frame: &mut Frame,
     game: &Game,
@@ -293,6 +305,7 @@ fn help_line<'a>(action: &'a str, keys: &'a str, theme: &Theme) -> Line<'a> {
     ])
 }
 
+/// A one-line status bar at the bottom of the screen showing quick-reference info.
 fn render_status_bar(
     frame: &mut Frame,
     game: &Game,
@@ -328,6 +341,10 @@ fn render_status_bar(
     frame.render_widget(bar, area);
 }
 
+/// Draw a centered popup overlay (title, pause, game-over).
+///
+/// Uses `Clear` to erase the underlying board area so the overlay text is
+/// readable even on a busy playfield.
 fn render_overlay(
     frame: &mut Frame,
     area: Rect,
@@ -363,6 +380,7 @@ fn render_overlay(
     );
 }
 
+/// Compute a rectangle centred within `area` at a given percentage size.
 fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)

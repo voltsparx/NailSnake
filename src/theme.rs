@@ -1,5 +1,10 @@
 use ratatui::style::{Color, Modifier, Style};
 
+/// Colour-capability tiers that the game can target.
+///
+/// The theme constructor picks the best palette based on the detected or
+/// user-forced capability, so the game looks good everywhere from a 1980s
+/// VT220 to a modern 24-bit terminal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorMode {
     Auto,
@@ -8,6 +13,10 @@ pub enum ColorMode {
     Basic,
 }
 
+/// Complete set of styles used across the TUI.
+///
+/// Every visual element — from the border to the snake tail — has a dedicated
+/// field so it can be tuned independently without touching the rendering code.
 #[derive(Debug, Clone)]
 pub struct Theme {
     pub border: Style,
@@ -39,6 +48,11 @@ impl Theme {
         }
     }
 
+    /// 24-bit truecolour palette — vibrant, modern-terminal look.
+    ///
+    /// Uses carefully chosen RGB values for a dark, rich aesthetic. Foreground
+    /// and background colours are paired to create depth (e.g., a dark red
+    /// background under the food to make it pop).
     fn true_color() -> Self {
         Self {
             border: Style::default().fg(Color::Rgb(80, 200, 120)),
@@ -90,6 +104,11 @@ impl Theme {
         }
     }
 
+    /// 256-colour ANSI palette — good quality on terminals without 24-bit support.
+    ///
+    /// Maps the same intent to indexed colours. Where reasonable, named colours
+    /// (`Color::Green`, `Color::Cyan`) are used so the terminal can map them
+    /// to the user's chosen theme.
     fn ansi256() -> Self {
         Self {
             border: Style::default().fg(Color::Green),
@@ -123,6 +142,10 @@ impl Theme {
         }
     }
 
+    /// Basic 16-colour ANSI — the fallback for truly minimal environments.
+    ///
+    /// Only standard named colours (no Indexed or Rgb) so it works in any
+    /// terminal emulator, even an xterm on a remote server.
     fn basic() -> Self {
         Self {
             border: Style::default().fg(Color::Green),
@@ -153,6 +176,11 @@ impl Theme {
         }
     }
 
+    /// Select the style for a snake segment based on its position.
+    ///
+    /// The head is distinct (a different glyph + brighter colour).  The tail
+    /// blends into the body for short snakes; for long snakes we transition
+    /// gradually across the body length to create a subtle gradient effect.
     pub fn snake_segment(&self, index: usize, total: usize) -> Style {
         if index == 0 {
             return self.snake_head;

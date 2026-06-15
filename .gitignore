@@ -6,6 +6,9 @@
 # Temp install scripts (not part of the crate itself)
 /temp/
 
+# Build-scripts test artifacts
+build-scripts/test-root/
+
 # IDE & editors
 .vscode/
 .idea/

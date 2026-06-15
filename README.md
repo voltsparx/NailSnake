@@ -1,45 +1,68 @@
 # NailSnake
 
-A polished, full-screen terminal snake game written in Rust. NailSnake runs on **Windows**, **Linux**, and **macOS** using the alternate screen buffer and raw mode input — the same approach as vim/neovim — so it feels like a lightweight GUI while staying pure CLI.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/Rust-1.70%2B-dea584?logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![CI](https://github.com/voltsparx/NailSnake/actions/workflows/rust.yml/badge.svg)](https://github.com/voltsparx/NailSnake/actions/workflows/rust.yml)
+[![Tests](https://img.shields.io/badge/tests-12%2F12-passing-brightgreen)](https://github.com/voltsparx/NailSnake/actions)
+[![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20|%20Linux%20|%20macOS-blue)]()
 
-Inspired by [nsnake](https://github.com/alexdantas/nSnake), rebuilt with Rust safety, richer colors, persistent high scores, and a `man` manual page.
+```
+      ╔══════════════════════════════════════╗
+      ║   ____       _ _  ____             _ ║
+      ║  |  _ \ __ _(_) |/ ___| _ __  ___| |║
+      ║  | | | / _` | | |\___ \| '_ \/ __| |║
+      ║  | |_| | (_| | | | ___) | | | \__ \_|║
+      ║  |____/ \__,_|_|_||____/|_| |_|___(_)║
+      ╚══════════════════════════════════════╝
+```
+
+A polished, full-screen terminal snake game written in Rust.  NailSnake runs on
+**Windows**, **Linux**, and **macOS** — dropping you into the alternate screen
+buffer with raw keyboard input, just like vim or neovim.  It *feels* like a
+lightweight GUI without ever leaving your terminal.
+
+> Inspired by [nsnake](https://github.com/alexdantas/nSnake), rebuilt with
+> Rust's safety guarantees, richer colour palettes, persistent high-scores,
+> and a proper `man` page.
+
+---
 
 ## Features
 
-- **Cross-platform** — Windows Terminal, PowerShell, cmd, Linux VTs, macOS Terminal/iTerm
-- **Vim-like TUI** — alternate screen, hidden cursor, status bar, sidebar info panel
-- **Rich colors** — truecolor, 256-color, and basic ANSI (`--color auto`)
-- **Safe terminal handling** — restores your shell on quit, panic, or Ctrl+C
-- **Live resize** — adapts when the terminal window is resized
-- **Difficulty presets** — Chill, Normal, Hard, Insane with progressive speed-up
-- **Wrap mode** — optional wall wrapping instead of instant death
-- **Persistent stats** — high score saved per OS config directory
-- **Manual page** — `man nailsnake` after installing the man page (man-db on Linux)
+| Capability | Detail |
+|------------|--------|
+| **Cross-platform** | Windows Terminal, PowerShell, cmd, Linux VTs, macOS Terminal, iTerm2 |
+| **Vim-like TUI** | Alternate screen, hidden cursor, status bar, sidebar info panel |
+| **Rich colours** | Truecolor, 256-colour, and basic ANSI — auto-detected or forced with `--color` |
+| **Safe terminal handling** | Restores your shell on quit, panic, or Ctrl+C |
+| **Live resize** | Adapts seamlessly when the terminal window is resized |
+| **Difficulty presets** | Chill, Normal, Hard, Insane — each with progressive speed-up |
+| **Wrap mode** | Optional wall-wrapping instead of instant death |
+| **Persistent stats** | High score saved per OS config directory (see below) |
+| **Manual page** | `man nailsnake` after installing the man page (man-db on Linux) |
 
-## Install
+---
 
-### From source (all platforms)
-
-```bash
-cargo install --path .
-```
-
-Or run without installing:
+## Quick start
 
 ```bash
+# Run in one shot — no install needed
 cargo run --release
+
+# Or install globally
+cargo install --path .
 ```
 
 ### Linux / macOS — binary + man page
 
 ```bash
-make install          # /usr/local/bin + man page + mandb
+make install                    # /usr/local/bin + man page + mandb
 # user-local (no root):
 PREFIX=$HOME/.local make install
 export MANPATH="$HOME/.local/share/man:${MANPATH:-}"
 ```
 
-Or man page only:
+Or the man page alone:
 
 ```bash
 ./scripts/install-man.sh
@@ -62,13 +85,15 @@ cargo install --path .
 nailsnake
 ```
 
-Windows has no built-in `man`. Install the manual for **Git Bash / MSYS2**:
+Windows has no built-in `man`.  Install the manual for **Git Bash / MSYS2**:
 
 ```powershell
 .\scripts\install-man.ps1 -UserLocal
 ```
 
-Or read the man source: `man/nailsnake.1`, or use `nailsnake --help`.
+Or read the man source at `man/nailsnake.1`, or use `nailsnake --help`.
+
+---
 
 ## Controls
 
@@ -81,6 +106,8 @@ Or read the man source: `man/nailsnake.1`, or use `nailsnake --help`.
 | `R` | Restart |
 | `Q` / `Esc` | Quit |
 | `Ctrl+C` | Force quit (terminal restored) |
+
+---
 
 ## CLI options
 
@@ -96,32 +123,46 @@ Options:
   -V, --version                  print version
 ```
 
-## Stats file locations
-
-| OS | Path |
-|----|------|
-| Linux | `~/.config/NailSnake/stats.json` |
-| macOS | `~/Library/Application Support/NailSnake/stats.json` |
-| Windows | `%APPDATA%\NailSnake\stats.json` |
+---
 
 ## Examples
 
 ```bash
+# Casual
 nailsnake
+
+# Bring the heat
 nailsnake -d hard --wrap --grid
+
+# Force a specific colour mode
 nailsnake --color truecolor
+
+# Read the full manual
 man nailsnake
 ```
 
+---
+
+## Stats file locations
+
+| OS | Path |
+|----|------|
+| Linux / BSD | `~/.config/NailSnake/stats.json` |
+| macOS | `~/Library/Application Support/NailSnake/stats.json` |
+| Windows | `%APPDATA%\NailSnake\stats.json` |
+
+---
+
 ## Requirements
 
-- Rust 1.70+ (edition 2021)
-- Terminal at least **60×22** characters
-- Interactive TTY (not piped output)
+- **Rust 1.70+** (edition 2021)
+- **Terminal** at least **60×22** characters
+- **Interactive TTY** (not a piped or scripted session)
 
 ### Windows build note
 
-If `link.exe` is missing (no Visual Studio C++ Build Tools), use the GNU toolchain with Scoop MinGW:
+If `link.exe` is missing (no Visual Studio C++ Build Tools), use the GNU
+toolchain with Scoop MinGW:
 
 ```powershell
 rustup toolchain install stable-x86_64-pc-windows-gnu
@@ -131,6 +172,18 @@ cargo +stable-x86_64-pc-windows-gnu build --release
 ```
 
 The project `.cargo/config.toml` already points the GNU linker at MinGW.
+
+---
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development setup, pull request
+guidelines, and code style conventions.
+
+## Security
+
+See [`SECURITY.md`](SECURITY.md) for supported versions and how to report
+vulnerabilities.
 
 ## Attribution
 

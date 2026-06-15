@@ -1,17 +1,12 @@
-mod app;
-mod config;
-mod game;
-mod platform;
-mod theme;
-mod ui;
+pub mod app;
 
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
+use nailsnake::config::{Difficulty, GameConfig};
+use nailsnake::platform::{detect_color_mode, ensure_interactive_terminal};
+use nailsnake::theme::ColorMode;
 
-use app::App;
-use config::{Difficulty, GameConfig};
-use platform::{detect_color_mode, ensure_interactive_terminal};
-use theme::ColorMode;
+use crate::app::App;
 
 #[derive(Parser)]
 #[command(
@@ -24,19 +19,15 @@ use theme::ColorMode;
     after_help = "Full manual: man nailsnake\nAuthor: Voltsparx <voltsparx@gmail.com>"
 )]
 struct Cli {
-    /// Difficulty preset (affects base speed)
     #[arg(short, long, default_value = "normal")]
     difficulty: DifficultyArg,
 
-    /// Wrap around walls instead of dying on collision
     #[arg(short, long)]
     wrap: bool,
 
-    /// Color capability: auto, truecolor, 256, or basic
     #[arg(short, long, default_value = "auto")]
     color: ColorArg,
 
-    /// Draw faint grid dots on the playfield
     #[arg(short, long)]
     grid: bool,
 }
