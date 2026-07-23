@@ -55,6 +55,9 @@ makepkg -f
 # Linux interactive packager/installer
 ./installer/install-linux.sh
 
+# Termux on Android
+./installer/install-termux.sh
+
 # macOS .pkg builder/installer
 ./installer/install-macos.sh
 ```
@@ -67,9 +70,14 @@ makepkg -f
 .\installer\install-windows.cmd
 ```
 
-The Linux installer detects the distro family and can create `.pkg.tar.zst`,
-`.deb`, `.rpm`, or generic `.tar.gz` packages. It asks before installing and
-uses elevated privileges only when system installation requires them.
+The Linux installer detects the active package manager (`apt`, `pacman`, `dnf`,
+`zypper`, `xbps`, `yum`, or `apk`) and can create `.deb`, `.pkg.tar.zst`,
+`.rpm`, `.xbps`, or generic `.tar.gz` packages. It checks prerequisites first,
+asks before installing missing tools, then asks again before installing the
+created package.
+
+The Termux installer builds a Termux-native binary, creates a `.tar.gz` archive,
+and can install it into `$PREFIX/bin`.
 
 The macOS installer creates a CLI-only `.pkg` that installs to `/usr/local/bin`
 and does not create an app launcher icon.
