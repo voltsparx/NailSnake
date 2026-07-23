@@ -16,18 +16,11 @@ say() {
 ask_yes_no() {
     prompt=$1
     default=${2:-n}
-    if [ "$default" = "y" ]; then
-        suffix="[Y/n]"
-    else
-        suffix="[y/N]"
-    fi
+    if [ "$default" = "y" ]; then suffix="[Y/n]"; else suffix="[y/N]"; fi
     printf '%s %s ' "$prompt" "$suffix"
     read answer
     answer=${answer:-$default}
-    case "$answer" in
-        y|Y|yes|YES) return 0 ;;
-        *) return 1 ;;
-    esac
+    case "$answer" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }
 
 need_cmd() {
@@ -40,31 +33,123 @@ sudo_cmd() {
     elif need_cmd sudo; then
         sudo "$@"
     else
-        say "This action needs root privileges, but sudo was not found."
+        say "Root privileges are required, but sudo was not found."
+        say "Re-run as root or install sudo."
         return 1
     fi
 }
 
 detect_os() {
+    OS_ID=unknown
+    OS_LIKE=
+    OS_NAME=$(uname -s)
     if [ -r /etc/os-release ]; then
         . /etc/os-release
         OS_ID=${ID:-unknown}
         OS_LIKE=${ID_LIKE:-}
         OS_NAME=${PRETTY_NAME:-$OS_ID}
-    else
-        OS_ID=unknown
-        OS_LIKE=
-        OS_NAME=$(uname -s)
     fi
 }
 
-suggest_package() {
-    case " $OS_ID $OS_LIKE " in
-        *" arch "*|*" manjaro "*) printf '%s' "pkg.tar.zst" ;;
-        *" debian "*|*" ubuntu "*|*" linuxmint "*|*" pop "*) printf '%s' "deb" ;;
-        *" fedora "*|*" rhel "*|*" centos "*|*" suse "*|*" opensuse "*) printf '%s' "rpm" ;;
-        *) printf '%s' "tar.gz" ;;
+detect_package_manager() {
+    if need_cmd apt-get; then PM="apt"; FORMAT="deb"
+    elif need_cmd pacman; then PM="pacman"; FORMAT="pkg.tar.zst"
+    elif need_cmd dnf; then PM="dnf"; FORMAT="rpm"
+    elif need_cmd zypper; then PM="zypper"; FORMAT="rpm"
+    elif need_cmd xbps-install; then PM="xbps"; FORMAT="xbps"
+    elif need_cmd yum; then PM="yum"; FORMAT="rpm"
+    elif need_cmd apk; then PM="apk"; FORMAT="tar.gz"
+    else PM="unknown"; FORMAT="tar.gz"
+    fi
+}
+
+missing_common_tools() {
+    missing=""
+    for cmd in cargo git tar gzip awk; do
+        if ! need_cmd "$cmd"; then
+            missing="$missing $cmd"
+        fi
+    done
+    printf '%s' "$missing"
+}
+
+missing_format_tools() {
+    kind=$1
+    missing=""
+    case "$kind" in
+        pkg.tar.zst)
+            need_cmd makepkg || missing="$missing makepkg"
+            ;;
+        deb)
+            need_cmd dpkg-deb || missing="$missing dpkg-deb"
+            need_cmd dpkg || missing="$missing dpkg"
+            ;;
+        rpm)
+            need_cmd rpmbuild || missing="$missing rpmbuild"
+            ;;
+        xbps)
+            need_cmd xbps-create || missing="$missing xbps-create"
+            ;;
+        tar.gz)
+            ;;
     esac
+    printf '%s' "$missing"
+}
+
+install_prerequisites() {
+    kind=$1
+    common=$(missing_common_tools)
+    format_missing=$(missing_format_tools "$kind")
+    missing="$common $format_missing"
+
+    if [ -z "$(printf '%s' "$missing" | tr -d ' ')" ]; then
+        say "Prerequisites: ok"
+        return 0
+    fi
+
+    say "Missing prerequisites:$missing"
+    ask_yes_no "Install missing prerequisites using $PM?" "y" || return 1
+
+    case "$PM" in
+        apt)
+            sudo_cmd apt-get update
+            sudo_cmd apt-get install -y build-essential cargo git tar gzip dpkg-dev
+            ;;
+        pacman)
+            sudo_cmd pacman -Sy --needed base-devel rust cargo git tar gzip
+            ;;
+        dnf)
+            sudo_cmd dnf install -y gcc gcc-c++ make cargo git tar gzip rpm-build
+            ;;
+        zypper)
+            sudo_cmd zypper install -y gcc gcc-c++ make cargo git tar gzip rpm-build
+            ;;
+        yum)
+            sudo_cmd yum install -y gcc gcc-c++ make cargo git tar gzip rpm-build
+            ;;
+        xbps)
+            sudo_cmd xbps-install -Sy base-devel rust cargo git tar gzip xbps
+            ;;
+        apk)
+            sudo_cmd apk add build-base cargo git tar gzip
+            ;;
+        unknown)
+            say "No supported package manager was detected."
+            say "Install Rust/Cargo, git, tar, gzip, and the package builder manually."
+            return 1
+            ;;
+    esac
+}
+
+prepare_stage() {
+    prefix=${1:-usr}
+    rm -rf "$STAGE_DIR"
+    mkdir -p "$STAGE_DIR/$prefix/bin" "$STAGE_DIR/$prefix/share/man/man1" \
+        "$STAGE_DIR/$prefix/share/doc/$APP_NAME" "$STAGE_DIR/$prefix/share/licenses/$APP_NAME"
+    cp "$ROOT_DIR/target/release/$APP_NAME" "$STAGE_DIR/$prefix/bin/$APP_NAME"
+    cp "$ROOT_DIR/man/$APP_NAME.1" "$STAGE_DIR/$prefix/share/man/man1/$APP_NAME.1"
+    cp "$ROOT_DIR/README.md" "$STAGE_DIR/$prefix/share/doc/$APP_NAME/README.md"
+    cp "$ROOT_DIR/LICENSE" "$STAGE_DIR/$prefix/share/licenses/$APP_NAME/LICENSE"
 }
 
 build_binary() {
@@ -73,39 +158,24 @@ build_binary() {
     cargo build --release --locked
 }
 
-prepare_stage() {
-    rm -rf "$STAGE_DIR"
-    mkdir -p "$STAGE_DIR/usr/bin" "$STAGE_DIR/usr/share/man/man1" \
-        "$STAGE_DIR/usr/share/doc/$APP_NAME" "$STAGE_DIR/usr/share/licenses/$APP_NAME"
-    cp "$ROOT_DIR/target/release/$APP_NAME" "$STAGE_DIR/usr/bin/$APP_NAME"
-    cp "$ROOT_DIR/man/$APP_NAME.1" "$STAGE_DIR/usr/share/man/man1/$APP_NAME.1"
-    cp "$ROOT_DIR/README.md" "$STAGE_DIR/usr/share/doc/$APP_NAME/README.md"
-    cp "$ROOT_DIR/LICENSE" "$STAGE_DIR/usr/share/licenses/$APP_NAME/LICENSE"
-}
-
 build_arch_package() {
-    if need_cmd makepkg; then
-        cd "$ROOT_DIR"
-        makepkg -f >&2
-        package=$(find "$ROOT_DIR" -maxdepth 1 -name "$APP_NAME-$VERSION-*.pkg.tar.zst" | sort | tail -n 1)
-        printf '%s' "$package"
-    else
-        say "makepkg is required for .pkg.tar.zst packages."
-        return 1
-    fi
+    cd "$ROOT_DIR"
+    makepkg -f >&2
+    package=$(find "$ROOT_DIR" -maxdepth 1 -name "$APP_NAME-$VERSION-*.pkg.tar.zst" | sort | tail -n 1)
+    printf '%s' "$package"
 }
 
 build_deb_package() {
-    need_cmd dpkg-deb || { say "dpkg-deb is required for .deb packages."; return 1; }
-    prepare_stage
+    prepare_stage usr
     mkdir -p "$STAGE_DIR/DEBIAN"
     installed_size=$(du -sk "$STAGE_DIR/usr" | awk '{print $1}')
+    arch=$(dpkg --print-architecture 2>/dev/null || printf 'amd64')
     cat > "$STAGE_DIR/DEBIAN/control" <<EOF
 Package: $APP_NAME
 Version: $VERSION
 Section: games
 Priority: optional
-Architecture: $(dpkg --print-architecture 2>/dev/null || printf 'amd64')
+Architecture: $arch
 Maintainer: Voltsparx <voltsparx@gmail.com>
 Installed-Size: $installed_size
 Description: Cross-platform terminal Snake game written in Rust
@@ -113,13 +183,12 @@ Description: Cross-platform terminal Snake game written in Rust
  rich terminal colors, and a manual page.
 Homepage: $REPO_URL
 EOF
-    package="$DIST_DIR/${APP_NAME}_${VERSION}_$(dpkg --print-architecture 2>/dev/null || printf 'amd64').deb"
+    package="$DIST_DIR/${APP_NAME}_${VERSION}_${arch}.deb"
     dpkg-deb --build "$STAGE_DIR" "$package" >/dev/null
     printf '%s' "$package"
 }
 
 build_rpm_package() {
-    need_cmd rpmbuild || { say "rpmbuild is required for .rpm packages."; return 1; }
     buildroot="$DIST_DIR/rpmbuild"
     rm -rf "$buildroot"
     mkdir -p "$buildroot/BUILD" "$buildroot/RPMS" "$buildroot/SOURCES" "$buildroot/SPECS" "$buildroot/SRPMS"
@@ -162,8 +231,27 @@ EOF
     printf '%s' "$package"
 }
 
+build_xbps_package() {
+    prepare_stage usr
+    arch=$(uname -m)
+    package="$DIST_DIR/${APP_NAME}-${VERSION}_1.${arch}.xbps"
+    (
+        cd "$DIST_DIR"
+        xbps-create \
+            -A "$arch" \
+            -n "${APP_NAME}-${VERSION}_1" \
+            -s "Cross-platform terminal Snake game written in Rust" \
+            -l MIT \
+            -H "$REPO_URL" \
+            "$STAGE_DIR" >/dev/null
+    )
+    built=$(find "$DIST_DIR" -maxdepth 1 -name "${APP_NAME}-${VERSION}_1.*.xbps" | sort | tail -n 1)
+    mv "$built" "$package"
+    printf '%s' "$package"
+}
+
 build_tar_package() {
-    prepare_stage
+    prepare_stage usr/local
     package="$DIST_DIR/${APP_NAME}-${VERSION}-linux-$(uname -m).tar.gz"
     (cd "$STAGE_DIR" && tar -czf "$package" .)
     printf '%s' "$package"
@@ -172,8 +260,12 @@ build_tar_package() {
 install_package() {
     package=$1
     case "$package" in
-        *.pkg.tar.zst) sudo_cmd pacman -U "$package" ;;
-        *.deb) sudo_cmd dpkg -i "$package" ;;
+        *.pkg.tar.zst) sudo_cmd pacman -U --needed "$package" ;;
+        *.deb)
+            if need_cmd apt-get; then sudo_cmd apt-get install -y "$package"
+            else sudo_cmd dpkg -i "$package"
+            fi
+            ;;
         *.rpm)
             if need_cmd dnf; then sudo_cmd dnf install -y "$package"
             elif need_cmd zypper; then sudo_cmd zypper install -y "$package"
@@ -181,7 +273,9 @@ install_package() {
             else sudo_cmd rpm -Uvh "$package"
             fi
             ;;
+        *.xbps) sudo_cmd xbps-install -y --repository="$DIST_DIR" "$APP_NAME" ;;
         *.tar.gz)
+            say "Generic tar install extracts under /usr/local and needs root."
             sudo_cmd tar -xzf "$package" -C /
             if need_cmd mandb; then sudo_cmd mandb -q || true; fi
             ;;
@@ -189,35 +283,47 @@ install_package() {
     esac
 }
 
+choose_format() {
+    say "Choose package type:"
+    say "  1) $FORMAT        detected for $PM"
+    say "  2) deb           apt/dpkg systems"
+    say "  3) pkg.tar.zst   pacman/makepkg systems"
+    say "  4) rpm           dnf/yum/zypper systems"
+    say "  5) xbps          Void Linux"
+    say "  6) tar.gz        generic fallback"
+    printf 'Selection [recommended: %s]: ' "$FORMAT"
+    read choice
+    case "${choice:-$FORMAT}" in
+        1) printf '%s' "$FORMAT" ;;
+        2|deb) printf '%s' "deb" ;;
+        3|pkg|pkg.tar.zst|zst) printf '%s' "pkg.tar.zst" ;;
+        4|rpm) printf '%s' "rpm" ;;
+        5|xbps) printf '%s' "xbps" ;;
+        6|tar|tar.gz) printf '%s' "tar.gz" ;;
+        *) printf '%s' "$FORMAT" ;;
+    esac
+}
+
 main() {
     mkdir -p "$DIST_DIR"
     detect_os
-    suggested=$(suggest_package)
+    detect_package_manager
 
     say "$DISPLAY_NAME Linux installer"
     say "Detected OS: $OS_NAME"
-    say "Recommended package: $suggested"
+    say "Detected package manager: $PM"
+    say "Recommended package format: $FORMAT"
     say ""
-    say "Choose package type:"
-    say "  1) pkg.tar.zst  Arch/Manjaro/EndeavourOS"
-    say "  2) deb          Debian/Ubuntu/Linux Mint/Pop!_OS"
-    say "  3) rpm          Fedora/RHEL/CentOS/openSUSE"
-    say "  4) tar.gz       Generic Linux fallback"
-    printf 'Selection [recommended: %s]: ' "$suggested"
-    read choice
-    case "${choice:-$suggested}" in
-        1|pkg|pkg.tar.zst|zst) kind="pkg.tar.zst" ;;
-        2|deb) kind="deb" ;;
-        3|rpm) kind="rpm" ;;
-        4|tar|tar.gz) kind="tar.gz" ;;
-        *) kind="$suggested" ;;
-    esac
 
+    kind=$(choose_format)
+    install_prerequisites "$kind"
     build_binary
+
     case "$kind" in
         pkg.tar.zst) package=$(build_arch_package) ;;
         deb) package=$(build_deb_package) ;;
         rpm) package=$(build_rpm_package) ;;
+        xbps) package=$(build_xbps_package) ;;
         tar.gz) package=$(build_tar_package) ;;
         *) say "Unsupported package type: $kind"; exit 1 ;;
     esac
