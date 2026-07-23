@@ -24,13 +24,33 @@ ask_yes_no() {
     case "$answer" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }
 
+need_cmd() {
+    command -v "$1" >/dev/null 2>&1
+}
+
 if [ "$(uname -s)" != "Darwin" ]; then
     say "This installer must be run on macOS."
     exit 1
 fi
 
-command -v cargo >/dev/null 2>&1 || { say "cargo is required."; exit 1; }
-command -v pkgbuild >/dev/null 2>&1 || { say "pkgbuild is required. Install Xcode Command Line Tools."; exit 1; }
+if ! need_cmd cargo; then
+    say "Rust/Cargo is required."
+    if need_cmd brew && ask_yes_no "Install Rust with Homebrew now?" "y"; then
+        brew install rust
+    else
+        say "Install Rust from https://rustup.rs/ or with Homebrew, then re-run this script."
+        exit 1
+    fi
+fi
+
+if ! need_cmd pkgbuild; then
+    say "pkgbuild is required and is provided by Xcode Command Line Tools."
+    if ask_yes_no "Open the Xcode Command Line Tools installer now?" "y"; then
+        xcode-select --install || true
+    fi
+    say "After the tools finish installing, re-run this script."
+    exit 1
+fi
 
 mkdir -p "$DIST_DIR"
 say "Building $DISPLAY_NAME release binary..."
