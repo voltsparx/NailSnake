@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Download NailSnake packages for Linux, Termux, macOS, and Windows.">
+  <title>NailSnake Downloads</title>
+  <link rel="preconnect" href="https://api.github.com">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="NailSnake home">
+      <span class="brand-mark">NS</span>
+      <span>
+        <strong>NailSnake</strong>
+        <small>Rust terminal Snake</small>
+      </span>
+    </a>
+    <nav class="tabs" aria-label="Main navigation">
+      <a class="tab" href="index.html">Overview</a>
+      <a class="tab active" href="downloads.html">Downloads</a>
+      <a class="tab" href="https://github.com/voltsparx/NailSnake">Repository</a>
+    </nav>
+    <div class="theme-switcher" aria-label="Theme selection">
+      <button class="theme-option" type="button" data-theme="light">Light</button>
+      <button class="theme-option" type="button" data-theme="dark">Dark</button>
+      <button class="theme-option" type="button" data-theme="system">System</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-title">
+      <p class="eyebrow">Install NailSnake</p>
+      <h1>Downloads</h1>
+      <p>
+        Release assets are loaded live from GitHub. Pick the package format that
+        matches your system, or build from source if no package is published yet.
+      </p>
+    </section>
+
+    <section class="download-layout">
+      <div class="download-panel">
+        <div class="panel-heading">
+          <h2>Latest Release</h2>
+          <span id="download-version">Loading...</span>
+        </div>
+        <div id="release-assets" class="asset-list" aria-live="polite">
+          <p class="muted">Fetching release assets from GitHub...</p>
+        </div>
+      </div>
+
+      <aside class="download-panel">
+        <h2>Package Guide</h2>
+        <ul class="format-list">
+          <li><strong>.deb</strong><span>Debian, Ubuntu, Linux Mint</span></li>
+          <li><strong>.rpm</strong><span>Fedora, RHEL, openSUSE</span></li>
+          <li><strong>.pkg.tar.zst</strong><span>Arch Linux and derivatives</span></li>
+          <li><strong>.tar.gz</strong><span>Generic Linux or Termux archive</span></li>
+          <li><strong>.pkg</strong><span>macOS CLI installer</span></li>
+          <li><strong>.msi</strong><span>Windows installer</span></li>
+        </ul>
+        <a class="button wide" href="https://github.com/voltsparx/NailSnake/releases">All releases</a>
+      </aside>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <p class="eyebrow">Build From Source</p>
+        <h2>Use Cargo when a package is not available.</h2>
+      </div>
+      <pre class="code-block"><code>git clone https://github.com/voltsparx/NailSnake.git
+cd NailSnake
+cargo install --path .
+nailsnake --about</code></pre>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>Author: voltsparx (Niyor Kalita)</span>
+    <a href="mailto:voltsparx@gmail.com">voltsparx@gmail.com</a>
+    <a href="https://github.com/voltsparx/NailSnake">github.com/voltsparx/NailSnake</a>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
