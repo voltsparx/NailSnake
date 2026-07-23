@@ -41,6 +41,15 @@ impl Difficulty {
             Difficulty::Insane => "Insane",
         }
     }
+
+    pub fn next(self) -> Self {
+        match self {
+            Difficulty::Chill => Difficulty::Normal,
+            Difficulty::Normal => Difficulty::Hard,
+            Difficulty::Hard => Difficulty::Insane,
+            Difficulty::Insane => Difficulty::Chill,
+        }
+    }
 }
 
 /// On-disk statistics, serialized as JSON.
@@ -109,7 +118,7 @@ impl GameConfig {
 /// Resolve the platform-appropriate stats file path.
 ///
 /// Uses the `directories` crate which follows the XDG spec on Linux, the
-/// macOS convention, and the `%APPDATA%` pattern on Windows — all without
+/// macOS convention, and the `%APPDATA%` pattern on Windows - all without
 /// conditional compilation.
 fn stats_file_path() -> Result<PathBuf> {
     let dirs = ProjectDirs::from("", "", "NailSnake")
