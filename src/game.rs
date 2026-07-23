@@ -51,7 +51,7 @@ pub enum GamePhase {
 /// Core game state: snake body, food, score, and physics parameters.
 ///
 /// The snake is stored as a `VecDeque` so pushing a new head and popping the
-/// tail (when not eating) is O(1). The direction queue is minimal — we only
+/// tail (when not eating) is O(1). The direction queue is minimal - we only
 /// buffer one pending direction to prevent the player from reversing into
 /// themselves within a single tick.
 #[derive(Debug)]
@@ -107,7 +107,7 @@ impl Game {
         game
     }
 
-    /// Full reset — equivalent to constructing a new `Game` with the same
+    /// Full reset - equivalent to constructing a new `Game` with the same
     /// dimensions and settings, but updates in place.
     pub fn reset(&mut self) {
         *self = Game::new(self.width, self.height, self.difficulty, self.wrap_walls);
@@ -220,14 +220,24 @@ impl Game {
             y: ny as u16,
         };
 
-        if self.snake.iter().any(|p| *p == next_point) {
+        let will_grow = next_point == self.food;
+        let body_collision = if will_grow {
+            self.snake.iter().any(|p| *p == next_point)
+        } else {
+            self.snake
+                .iter()
+                .take(self.snake.len().saturating_sub(1))
+                .any(|p| *p == next_point)
+        };
+
+        if body_collision {
             self.phase = GamePhase::GameOver;
             return true;
         }
 
         self.snake.push_front(next_point);
 
-        if next_point == self.food {
+        if will_grow {
             self.score += 10 + self.food_eaten;
             self.food_eaten += 1;
             self.spawn_food();
@@ -240,8 +250,8 @@ impl Game {
 
     /// Place food on a random empty cell.
     ///
-    /// If every cell is occupied by the snake, the game is won (→ GameOver).
-    /// Uses `HashSet` for the snake-body lookup to avoid O(n²) scans on large
+    /// If every cell is occupied by the snake, the game is won and enters GameOver.
+    /// Uses `HashSet` for the snake-body lookup to avoid quadratic scans on large
     /// boards.
     fn spawn_food(&mut self) {
         let snake_set: HashSet<Point> = self.snake.iter().copied().collect();
@@ -326,5 +336,25 @@ mod tests {
         assert_eq!(game.phase, GamePhase::Paused);
         game.toggle_pause();
         assert_eq!(game.phase, GamePhase::Running);
+    }
+
+    #[test]
+    fn moving_into_tail_cell_is_allowed_when_not_eating() {
+        let mut game = Game::new(8, 8, Difficulty::Normal, false);
+        game.phase = GamePhase::Running;
+        game.snake = VecDeque::from([
+            Point { x: 3, y: 3 },
+            Point { x: 3, y: 4 },
+            Point { x: 2, y: 4 },
+            Point { x: 2, y: 3 },
+        ]);
+        game.direction = Direction::Left;
+        game.pending_direction = Direction::Left;
+        game.food = Point { x: 7, y: 7 };
+
+        game.tick();
+
+        assert_eq!(game.phase, GamePhase::Running);
+        assert_eq!(game.snake.front(), Some(&Point { x: 2, y: 3 }));
     }
 }
