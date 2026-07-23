@@ -5,6 +5,7 @@ use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
+use crate::game::{Game, GamePhase};
 use crate::theme::ColorMode;
 
 /// Difficulty presets.  Each variant maps to a base tick interval (in ms) that
@@ -16,6 +17,29 @@ pub enum Difficulty {
     Normal,
     Hard,
     Insane,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SnakeSkin {
+    #[default]
+    Blocky,
+    Rhombus,
+}
+
+impl SnakeSkin {
+    pub fn label(&self) -> &'static str {
+        match self {
+            SnakeSkin::Blocky => "Blocky",
+            SnakeSkin::Rhombus => "Rhombus",
+        }
+    }
+
+    pub fn next(self) -> Self {
+        match self {
+            SnakeSkin::Blocky => SnakeSkin::Rhombus,
+            SnakeSkin::Rhombus => SnakeSkin::Blocky,
+        }
+    }
 }
 
 impl Difficulty {
@@ -67,8 +91,12 @@ pub struct GameConfig {
     pub wrap_walls: bool,
     pub color_mode: ColorMode,
     pub show_grid: bool,
+    pub random_maze: bool,
+    pub snake_skin: SnakeSkin,
+    pub custom_speed_ms: u64,
     pub stats: PersistedStats,
     stats_path: PathBuf,
+    session_path: PathBuf,
 }
 
 impl GameConfig {
@@ -79,14 +107,19 @@ impl GameConfig {
         show_grid: bool,
     ) -> Result<Self> {
         let stats_path = stats_file_path()?;
+        let session_path = session_file_path()?;
         let stats = load_stats(&stats_path).unwrap_or_default();
         Ok(Self {
             difficulty,
             wrap_walls,
             color_mode,
             show_grid,
+            random_maze: false,
+            snake_skin: SnakeSkin::Blocky,
+            custom_speed_ms: difficulty.tick_ms(),
             stats,
             stats_path,
+            session_path,
         })
     }
 
@@ -113,6 +146,64 @@ impl GameConfig {
         self.save_stats()?;
         Ok(new_record)
     }
+
+    pub fn has_saved_game(&self) -> bool {
+        self.session_path.is_file() && self.load_active_game().ok().flatten().is_some()
+    }
+
+    pub fn load_active_game(&self) -> Result<Option<Game>> {
+        if !self.session_path.is_file() {
+            return Ok(None);
+        }
+
+        let data = fs::read_to_string(&self.session_path)
+            .with_context(|| format!("reading saved game from {}", self.session_path.display()))?;
+        let mut game: Game = serde_json::from_str(&data)
+            .with_context(|| format!("parsing saved game {}", self.session_path.display()))?;
+
+        if !game.is_valid_for_resume() || game.phase == GamePhase::GameOver {
+            let _ = self.clear_active_game();
+            return Ok(None);
+        }
+
+        if game.phase == GamePhase::Running {
+            game.phase = GamePhase::Paused;
+        }
+        Ok(Some(game))
+    }
+
+    pub fn save_active_game(&self, game: &Game) -> Result<()> {
+        if game.phase == GamePhase::GameOver || !game.is_valid_for_resume() {
+            return self.clear_active_game();
+        }
+
+        if let Some(parent) = self.session_path.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("creating session dir {}", parent.display()))?;
+        }
+
+        let temp_path = self.session_path.with_extension("json.tmp");
+        let json = serde_json::to_string_pretty(game)?;
+        fs::write(&temp_path, json)
+            .with_context(|| format!("writing saved game to {}", temp_path.display()))?;
+        fs::rename(&temp_path, &self.session_path).with_context(|| {
+            format!(
+                "moving saved game {} to {}",
+                temp_path.display(),
+                self.session_path.display()
+            )
+        })?;
+        Ok(())
+    }
+
+    pub fn clear_active_game(&self) -> Result<()> {
+        if self.session_path.is_file() {
+            fs::remove_file(&self.session_path).with_context(|| {
+                format!("removing saved game {}", self.session_path.display())
+            })?;
+        }
+        Ok(())
+    }
 }
 
 /// Resolve the platform-appropriate stats file path.
@@ -124,6 +215,12 @@ fn stats_file_path() -> Result<PathBuf> {
     let dirs = ProjectDirs::from("", "", "NailSnake")
         .context("could not resolve config directory for NailSnake")?;
     Ok(dirs.config_dir().join("stats.json"))
+}
+
+fn session_file_path() -> Result<PathBuf> {
+    let dirs = ProjectDirs::from("", "", "NailSnake")
+        .context("could not resolve config directory for NailSnake")?;
+    Ok(dirs.data_local_dir().join("active-game.json"))
 }
 
 fn load_stats(path: &PathBuf) -> Result<PersistedStats> {
