@@ -1,4 +1,4 @@
-# NailSnake — cross-platform install helpers (Unix: Linux, macOS, Git Bash)
+# NailSnake - cross-platform install helpers (Unix: Linux, macOS, Git Bash)
 #
 # Usage:
 #   make build          # release binary
@@ -56,10 +56,10 @@ install-man:
 mandb:
 	@if command -v mandb >/dev/null 2>&1; then \
 		mandb -q $(DESTDIR)$(MANDIR) 2>/dev/null || mandb -q; \
-		echo "man-db cache updated — run: man nailsnake"; \
+		echo "man-db cache updated - run: man nailsnake"; \
 	elif command -v makewhatis >/dev/null 2>&1; then \
 		makewhatis $(DESTDIR)$(MAN1DIR) 2>/dev/null || true; \
-		echo "man whatis cache updated — run: man nailsnake"; \
+		echo "man whatis cache updated - run: man nailsnake"; \
 	else \
 		echo "man page installed to $(DESTDIR)$(MAN_PAGE)"; \
 		echo "Run: man -M $(DESTDIR)$(MAN1DIR) nailsnake"; \
