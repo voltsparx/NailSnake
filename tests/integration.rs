@@ -20,7 +20,7 @@ fn full_snake_gameplay_simulation() {
     assert!(game.score > 0 || game.phase == GamePhase::GameOver);
 }
 
-/// Fill a tiny 3×3 board until the snake occupies every cell.
+/// Fill a tiny 3x3 board until the snake occupies every cell.
 /// The game should end when no space remains for food.
 #[test]
 fn snake_covers_whole_board_triggers_game_over() {
