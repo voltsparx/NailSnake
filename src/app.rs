@@ -50,12 +50,12 @@ pub struct App {
 impl App {
     pub fn new(config: GameConfig) -> Result<Self> {
         install_panic_hook();
+        let (terminal_width, terminal_height) = crossterm::terminal::size()?;
+        ensure_terminal_size(terminal_width, terminal_height)?;
+
         let terminal = initialize_terminal()?;
 
-        let size = terminal.size()?;
-        ensure_terminal_size(size.width, size.height)?;
-
-        let (board_w, board_h) = board_dimensions(size.width, size.height);
+        let (board_w, board_h) = board_dimensions(terminal_width, terminal_height);
         let theme = Theme::new(config.color_mode);
         let mut game = Game::with_options(
             board_w,

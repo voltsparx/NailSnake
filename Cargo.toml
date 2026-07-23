@@ -12,6 +12,7 @@ categories = ["games", "command-line-utilities"]
 readme = "README.md"
 include = [
     "/src/**/*",
+    "/docs/**/*",
     "/man/**/*",
     "/scripts/**/*",
     "/installer/**/*",

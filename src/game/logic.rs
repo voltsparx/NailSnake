@@ -1,7 +1,6 @@
 use std::collections::{HashSet, VecDeque};
 
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 
 use crate::config::Difficulty;
 
@@ -223,20 +222,24 @@ impl Game {
 
     fn spawn_food(&mut self) {
         let snake_set: HashSet<Point> = self.snake.iter().copied().collect();
-        let total = self.width as usize * self.height as usize;
-        let blocked = self.snake.len() + self.walls.len();
-        let mut empty = Vec::with_capacity(total.saturating_sub(blocked));
+        let mut rng = thread_rng();
+        let mut selected = None;
+        let mut empty_count = 0usize;
+
         for y in 0..self.height {
             for x in 0..self.width {
                 let p = Point { x, y };
                 if !snake_set.contains(&p) && !self.walls.contains(&p) {
-                    empty.push(p);
+                    empty_count += 1;
+                    if rng.gen_range(0..empty_count) == 0 {
+                        selected = Some(p);
+                    }
                 }
             }
         }
 
-        if let Some(food) = empty.choose(&mut thread_rng()) {
-            self.food = *food;
+        if let Some(food) = selected {
+            self.food = food;
         } else {
             self.phase = GamePhase::GameOver;
         }

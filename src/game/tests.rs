@@ -89,3 +89,17 @@ fn random_maze_leaves_start_area_open() {
     assert!(!game.walls.contains(&game.food));
     assert!(!game.walls.is_empty());
 }
+
+#[test]
+fn game_state_round_trips_for_resume() {
+    let mut game = Game::with_options(30, 18, Difficulty::Hard, true, true, 90);
+    game.phase = GamePhase::Paused;
+    game.tick_count = 42;
+
+    let json = serde_json::to_string(&game).unwrap();
+    let restored: Game = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(restored.phase, GamePhase::Paused);
+    assert_eq!(restored.tick_count, 42);
+    assert!(restored.is_valid_for_resume());
+}

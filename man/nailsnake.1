@@ -1,5 +1,5 @@
 .\" NailSnake manual page - compatible with man-db and BSD man(1).
-.TH NAILSNAKE 1 "June 2026" "NailSnake 1.0.0" "User Commands"
+.TH NAILSNAKE 1 "July 2026" "NailSnake v1.0" "User Commands"
 .SH NAME
 nailsnake \- full-screen terminal Snake game with rich colors
 .SH SYNOPSIS
@@ -21,6 +21,9 @@ and
 with automatic color detection for truecolor, 256-color, and basic ANSI
 terminals. High scores and game counts are saved under the user configuration
 directory for your operating system.
+.PP
+If an active game is saved after quitting or pressing Ctrl+C, the main menu
+shows a Continue option on the next launch.
 .SH OPTIONS
 .TP
 .BR \-d ", " \-\-difficulty " " \fIMODE\fR
@@ -51,6 +54,9 @@ or
 .BR \-g ", " \-\-grid
 Draw faint grid dots on the playfield.
 .TP
+.BR \-\-about
+Print project information, author, contact, repository, and feature summary.
+.TP
 .BR \-h ", " \-\-help
 Print help information and exit.
 .TP
@@ -78,7 +84,7 @@ Restart the current round.
 Quit and restore the terminal.
 .TP
 .B Ctrl+c
-Force quit (terminal is restored).
+Force quit, save an active game, and restore the terminal.
 .SH FILES
 .TP
 .I Linux / BSD
@@ -91,6 +97,9 @@ Force quit (terminal is restored).
 %APPDATA%\\NailSnake\\stats.json
 .PP
 These files store the high score and total games played.
+.PP
+Active-game resume data is stored separately as active-game.json in the
+platform local data directory. Invalid or completed snapshots are ignored.
 .SH ENVIRONMENT
 .TP
 .B COLORTERM

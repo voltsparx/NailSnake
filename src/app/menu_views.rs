@@ -119,12 +119,12 @@ impl App {
             items.push("Continue".to_string());
         }
         items.extend([
-                    "Arcade Mode".to_string(),
-                    "Game Settings".to_string(),
-                    "Help".to_string(),
-                    "Controls".to_string(),
-                    "Credits".to_string(),
-                    "Quit".to_string(),
+            "Arcade Mode".to_string(),
+            "Game Settings".to_string(),
+            "Help".to_string(),
+            "Controls".to_string(),
+            "Credits".to_string(),
+            "Quit".to_string(),
         ]);
         items
     }

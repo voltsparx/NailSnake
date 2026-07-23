@@ -2,7 +2,7 @@ use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use super::menu_state::{
-    controls_menu_len, main_menu_len, pause_menu_len, settings_menu_len, CaptureKey, MenuScreen,
+    controls_menu_len, pause_menu_len, settings_menu_len, CaptureKey, MenuScreen,
 };
 use super::App;
 use nailsnake::game::{Direction, Game, GamePhase};
@@ -158,7 +158,6 @@ impl App {
                 MainMenuAction::Controls => self.menu_screen = MenuScreen::Controls,
                 MainMenuAction::Credits => self.menu_screen = MenuScreen::Credits,
                 MainMenuAction::Quit => return Ok(true),
-                _ => {}
             },
             KeyCode::Char('h') | KeyCode::Char('H') | KeyCode::Char('?') => self.show_help = true,
             _ => {}

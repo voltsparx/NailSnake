@@ -158,8 +158,13 @@ impl GameConfig {
 
         let data = fs::read_to_string(&self.session_path)
             .with_context(|| format!("reading saved game from {}", self.session_path.display()))?;
-        let mut game: Game = serde_json::from_str(&data)
-            .with_context(|| format!("parsing saved game {}", self.session_path.display()))?;
+        let mut game: Game = match serde_json::from_str(&data) {
+            Ok(game) => game,
+            Err(_) => {
+                let _ = self.clear_active_game();
+                return Ok(None);
+            }
+        };
 
         if !game.is_valid_for_resume() || game.phase == GamePhase::GameOver {
             let _ = self.clear_active_game();
@@ -186,6 +191,14 @@ impl GameConfig {
         let json = serde_json::to_string_pretty(game)?;
         fs::write(&temp_path, json)
             .with_context(|| format!("writing saved game to {}", temp_path.display()))?;
+        if self.session_path.is_file() {
+            fs::remove_file(&self.session_path).with_context(|| {
+                format!(
+                    "replacing previous saved game {}",
+                    self.session_path.display()
+                )
+            })?;
+        }
         fs::rename(&temp_path, &self.session_path).with_context(|| {
             format!(
                 "moving saved game {} to {}",
@@ -198,9 +211,8 @@ impl GameConfig {
 
     pub fn clear_active_game(&self) -> Result<()> {
         if self.session_path.is_file() {
-            fs::remove_file(&self.session_path).with_context(|| {
-                format!("removing saved game {}", self.session_path.display())
-            })?;
+            fs::remove_file(&self.session_path)
+                .with_context(|| format!("removing saved game {}", self.session_path.display()))?;
         }
         Ok(())
     }

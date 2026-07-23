@@ -1,9 +1,10 @@
 # NailSnake
 
+[![Version](https://img.shields.io/badge/version-v1.0-dea584)](https://github.com/voltsparx/NailSnake)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-1.70%2B-dea584?logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![CI](https://github.com/voltsparx/NailSnake/actions/workflows/rust.yml/badge.svg)](https://github.com/voltsparx/NailSnake/actions/workflows/rust.yml)
-[![Tests](https://img.shields.io/badge/tests-12%2F12-passing-brightgreen)](https://github.com/voltsparx/NailSnake/actions)
+[![Tests](https://img.shields.io/badge/tests-15%2F15-passing-brightgreen)](https://github.com/voltsparx/NailSnake/actions)
 [![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20|%20Linux%20|%20macOS-blue)]()
 
 A polished, full-screen terminal snake game written in Rust.  NailSnake runs on
@@ -25,6 +26,7 @@ lightweight GUI without ever leaving your terminal.
 | **Vim-like TUI** | Alternate screen, hidden cursor, status bar, sidebar info panel |
 | **Rich colours** | Truecolor, 256-colour, and basic ANSI - auto-detected or forced with `--color` |
 | **Safe terminal handling** | Restores your shell on quit, panic, or Ctrl+C |
+| **Continue game** | Saves an active session on quit/force-quit and offers Continue on next launch |
 | **Live resize** | Adapts seamlessly when the terminal window is resized |
 | **Difficulty presets** | Chill, Normal, Hard, Insane - each with progressive speed-up |
 | **Arcade menu** | nSnake-inspired main menu with settings, help, and an animated Rust-themed backdrop |
@@ -152,6 +154,7 @@ Options:
   -w, --wrap                     wrap around walls
   -c, --color <COLOR>            auto | truecolor | 256 | basic [default: auto]
   -g, --grid                     show grid dots
+      --about                    print project information
   -h, --help                     print help (see also: man nailsnake)
   -V, --version                  print version
 ```
@@ -170,6 +173,9 @@ nailsnake -d hard --wrap --grid
 # Force a specific colour mode
 nailsnake --color truecolor
 
+# Print project metadata
+nailsnake --about
+
 # Read the full manual
 man nailsnake
 ```
@@ -184,6 +190,9 @@ man nailsnake
 | macOS | `~/Library/Application Support/NailSnake/stats.json` |
 | Windows | `%APPDATA%\NailSnake\stats.json` |
 
+Active game resume data is stored separately from stats as `active-game.json`
+in the platform data directory. See [`docs/persistence.md`](docs/persistence.md).
+
 ---
 
 ## Requirements
@@ -191,8 +200,11 @@ man nailsnake
 - **Rust 1.70+** (edition 2021)
 - **Terminal** at least **60x22** characters
 - **Interactive TTY** (not a piped or scripted session)
+- Startup resource preflight must be able to reserve a small memory buffer and inspect CPU availability
 
+## Documentation
 
+Detailed documentation lives in [`docs/`](docs/).
 
 ## Contributing
 

@@ -5,6 +5,9 @@ use crossterm::tty::IsTty;
 
 use crate::theme::ColorMode;
 
+mod resources;
+pub use resources::ensure_hardware_resources;
+
 /// Target operating system, determined at compile time via `cfg!`.
 ///
 /// We use this for platform-specific colour detection and stats path hints.
