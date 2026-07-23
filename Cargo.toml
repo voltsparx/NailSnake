@@ -5,16 +5,20 @@ edition = "2021"
 description = "Cross-platform terminal Snake for Windows, Linux, and macOS"
 license = "MIT"
 authors = ["Voltsparx <voltsparx@gmail.com>"]
+repository = "https://github.com/voltsparx/NailSnake"
+homepage = "https://github.com/voltsparx/NailSnake"
 keywords = ["snake", "tui", "terminal", "game", "cli", "cross-platform"]
 categories = ["games", "command-line-utilities"]
 readme = "README.md"
 include = [
-    "src/**/*",
-    "man/**/*",
-    "scripts/**/*",
-    "Makefile",
-    "LICENSE",
-    "README.md",
+    "/src/**/*",
+    "/man/**/*",
+    "/scripts/**/*",
+    "/installer/**/*",
+    "/PKGBUILD",
+    "/Makefile",
+    "/LICENSE",
+    "/README.md",
 ]
 
 [lib]
