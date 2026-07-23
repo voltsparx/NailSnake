@@ -7,7 +7,7 @@
 [![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20|%20Linux%20|%20macOS-blue)]()
 
 A polished, full-screen terminal snake game written in Rust.  NailSnake runs on
-**Windows**, **Linux**, and **macOS** — dropping you into the alternate screen
+**Windows**, **Linux**, and **macOS** - dropping you into the alternate screen
 buffer with raw keyboard input, just like vim or neovim.  It *feels* like a
 lightweight GUI without ever leaving your terminal.
 
@@ -23,10 +23,11 @@ lightweight GUI without ever leaving your terminal.
 |------------|--------|
 | **Cross-platform** | Windows Terminal, PowerShell, cmd, Linux VTs, macOS Terminal, iTerm2 |
 | **Vim-like TUI** | Alternate screen, hidden cursor, status bar, sidebar info panel |
-| **Rich colours** | Truecolor, 256-colour, and basic ANSI — auto-detected or forced with `--color` |
+| **Rich colours** | Truecolor, 256-colour, and basic ANSI - auto-detected or forced with `--color` |
 | **Safe terminal handling** | Restores your shell on quit, panic, or Ctrl+C |
 | **Live resize** | Adapts seamlessly when the terminal window is resized |
-| **Difficulty presets** | Chill, Normal, Hard, Insane — each with progressive speed-up |
+| **Difficulty presets** | Chill, Normal, Hard, Insane - each with progressive speed-up |
+| **Arcade menu** | nSnake-inspired main menu with settings, help, and an animated Rust-themed backdrop |
 | **Wrap mode** | Optional wall-wrapping instead of instant death |
 | **Persistent stats** | High score saved per OS config directory (see below) |
 | **Manual page** | `man nailsnake` after installing the man page |
@@ -36,14 +37,48 @@ lightweight GUI without ever leaving your terminal.
 ## Quick start
 
 ```bash
-# Run in one shot — no install needed
+# Run in one shot - no install needed
 cargo run --release
 
 # Or install globally
 cargo install --path .
 ```
 
-### Linux / macOS — binary + man page
+## Packaging And Installers
+
+NailSnake includes packaging helpers for release builds:
+
+```bash
+# Arch Linux package with makepkg
+makepkg -f
+
+# Linux interactive packager/installer
+./installer/install-linux.sh
+
+# macOS .pkg builder/installer
+./installer/install-macos.sh
+```
+
+```powershell
+# Windows PowerShell installer
+.\installer\install-windows.ps1
+
+# cmd.exe wrapper
+.\installer\install-windows.cmd
+```
+
+The Linux installer detects the distro family and can create `.pkg.tar.zst`,
+`.deb`, `.rpm`, or generic `.tar.gz` packages. It asks before installing and
+uses elevated privileges only when system installation requires them.
+
+The macOS installer creates a CLI-only `.pkg` that installs to `/usr/local/bin`
+and does not create an app launcher icon.
+
+The Windows installer builds `nailsnake.exe`, installs it under either the
+current user's local Programs directory or `Program Files`, and updates PATH so
+both cmd.exe and PowerShell can run `nailsnake` from a new terminal window.
+
+### Linux / macOS - binary + man page
 
 ```bash
 make install                    # /usr/local/bin + man page
@@ -90,7 +125,7 @@ Or read the man source at `man/nailsnake.1`, or use `nailsnake --help`.
 | Key | Action |
 |-----|--------|
 | `Enter` | Start from title screen |
-| `↑` `↓` `←` `→` | Move |
+| Arrow keys | Move |
 | `W` `A` `S` `D` | Move (alternate) |
 | `Space` | Pause / resume |
 | `R` | Restart |
@@ -146,7 +181,7 @@ man nailsnake
 ## Requirements
 
 - **Rust 1.70+** (edition 2021)
-- **Terminal** at least **60×22** characters
+- **Terminal** at least **60x22** characters
 - **Interactive TTY** (not a piped or scripted session)
 
 
@@ -163,8 +198,8 @@ vulnerabilities.
 
 ## Attribution
 
-**Author:** Voltsparx · **Contact:** [voltsparx@gmail.com](mailto:voltsparx@gmail.com)
+**Author:** Voltsparx - **Contact:** [voltsparx@gmail.com](mailto:voltsparx@gmail.com)
 
 ## License
 
-MIT — Copyright (c) 2026 Voltsparx
+MIT - Copyright (c) 2026 Voltsparx
