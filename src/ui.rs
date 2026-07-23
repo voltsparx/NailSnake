@@ -19,6 +19,13 @@ pub struct LayoutAreas {
     pub status: Rect,
 }
 
+pub struct MenuView {
+    pub title: String,
+    pub items: Vec<String>,
+    pub selected: Option<usize>,
+    pub hint: String,
+}
+
 /// Split the terminal area into board, sidebar, and status bar regions.
 pub fn compute_layout(area: Rect) -> LayoutAreas {
     let outer = Layout::default()
@@ -43,45 +50,287 @@ pub fn compute_layout(area: Rect) -> LayoutAreas {
 
 /// Draw one complete frame: the game board, info sidebar, status bar, and any
 /// active overlay (pause, game-over, or title screen).
-pub fn render(frame: &mut Frame, game: &Game, config: &GameConfig, theme: &Theme, os_label: &str) {
+pub fn render(
+    frame: &mut Frame,
+    game: &Game,
+    config: &GameConfig,
+    theme: &Theme,
+    os_label: &str,
+    menu: Option<&MenuView>,
+    frame_tick: u64,
+) {
     let areas = compute_layout(frame.area());
 
     render_board(frame, game, areas.board, theme, config.show_grid);
     render_sidebar(frame, game, config, areas.sidebar, theme, os_label);
     render_status_bar(frame, game, config, areas.status, theme, os_label);
 
+    if game.phase == GamePhase::Menu {
+        if let Some(menu) = menu {
+            render_main_menu(frame, frame.area(), menu, game, config, theme, frame_tick);
+        }
+        return;
+    }
+
     match game.phase {
-        GamePhase::Paused => render_overlay(
-            frame,
-            areas.board,
-            theme,
-            " PAUSED ",
-            "Press Space to resume",
-            theme.paused,
-        ),
+        GamePhase::Paused => {
+            if let Some(menu) = menu {
+                render_menu_panel(frame, areas.board, menu, theme, 62, 54);
+            }
+        }
         GamePhase::GameOver => render_overlay(
             frame,
             areas.board,
             theme,
             " GAME OVER ",
-            "Press R to restart · Q to quit",
+            "Press R to restart - Q to quit",
             theme.game_over,
         ),
-        GamePhase::Menu => render_overlay(
-            frame,
-            areas.board,
-            theme,
-            " NailSnake ",
-            "Press Enter to start",
-            theme.title,
-        ),
+        GamePhase::Menu => {}
         GamePhase::Running => {}
     }
 }
 
+fn render_main_menu(
+    frame: &mut Frame,
+    area: Rect,
+    menu: &MenuView,
+    game: &Game,
+    config: &GameConfig,
+    theme: &Theme,
+    frame_tick: u64,
+) {
+    frame.render_widget(Clear, area);
+    draw_oxide_rain(frame, area, theme, frame_tick);
+
+    let outer = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(8),
+            Constraint::Min(8),
+            Constraint::Length(3),
+        ])
+        .split(inset(area, 1));
+
+    let main = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Min(34), Constraint::Length(30)])
+        .split(outer[1]);
+
+    render_logo(frame, outer[0], theme);
+    render_menu_panel(frame, main[1], menu, theme, 100, 100);
+    render_attract_panel(frame, main[0], game, config, theme, frame_tick);
+    render_menu_footer(frame, outer[2], theme);
+}
+
+fn render_logo(frame: &mut Frame, area: Rect, theme: &Theme) {
+    let logo = vec![
+        Line::from(Span::styled(
+            " _   _       _ _ ____              _        ",
+            theme.title,
+        )),
+        Line::from(Span::styled(
+            "| \\ | | __ _(_) / ___| _ __   __ _| | _____ ",
+            theme.title,
+        )),
+        Line::from(Span::styled(
+            "|  \\| |/ _` | | \\___ \\| '_ \\ / _` | |/ / _ \\",
+            theme.title,
+        )),
+        Line::from(Span::styled(
+            "| |\\  | (_| | | |___) | | | | (_| |   <  __/",
+            theme.title,
+        )),
+        Line::from(Span::styled(
+            "|_| \\_|\\__,_|_|_|____/|_| |_|\\__,_|_|\\_\\___|",
+            theme.title,
+        )),
+    ];
+
+    frame.render_widget(
+        Paragraph::new(logo)
+            .alignment(Alignment::Center)
+            .style(theme.menu_text),
+        area,
+    );
+}
+
+fn render_menu_panel(
+    frame: &mut Frame,
+    area: Rect,
+    menu: &MenuView,
+    theme: &Theme,
+    percent_x: u16,
+    percent_y: u16,
+) {
+    let panel = if percent_x < 100 || percent_y < 100 {
+        centered_rect(percent_x, percent_y, area)
+    } else {
+        area
+    };
+    frame.render_widget(Clear, panel);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(theme.menu_border)
+        .title(Span::styled(
+            format!(" {} ", menu.title),
+            theme.sidebar_title,
+        ))
+        .style(theme.menu_panel);
+    let inner = inset(block.inner(panel), 1);
+    frame.render_widget(block, panel);
+
+    let mut lines = Vec::new();
+    for (index, item) in menu.items.iter().enumerate() {
+        let selected = menu.selected == Some(index);
+        let marker = if selected { "> " } else { "  " };
+        let style = if selected {
+            theme.menu_selected
+        } else {
+            theme.menu_text
+        };
+        lines.push(Line::from(vec![
+            Span::styled(marker, theme.menu_cursor),
+            Span::styled(item.clone(), style),
+        ]));
+        lines.push(Line::from(""));
+    }
+    lines.push(Line::from(Span::styled(menu.hint.clone(), theme.message)));
+
+    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
+}
+
+fn render_attract_panel(
+    frame: &mut Frame,
+    area: Rect,
+    game: &Game,
+    config: &GameConfig,
+    theme: &Theme,
+    frame_tick: u64,
+) {
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(theme.border)
+        .title(Span::styled(" Arcade Preview ", theme.sidebar_title))
+        .style(theme.sidebar);
+    let inner = inset(block.inner(area), 1);
+    frame.render_widget(block, area);
+
+    let mut lines = vec![
+        Line::from(Span::styled(
+            "Rust-powered terminal Snake",
+            theme.score_high,
+        )),
+        Line::from(""),
+        Line::from(format!("Difficulty   {}", config.difficulty.label())),
+        Line::from(format!(
+            "Walls        {}",
+            if config.wrap_walls {
+                "Teleport"
+            } else {
+                "Solid"
+            }
+        )),
+        Line::from(format!(
+            "Grid         {}",
+            if config.show_grid { "On" } else { "Off" }
+        )),
+        Line::from(format!("Best score   {}", config.stats.high_score)),
+        Line::from(format!("Games played {}", config.stats.games_played)),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Eat fast. Turn clean. Never reverse.",
+            theme.help_key,
+        )),
+        Line::from(""),
+    ];
+
+    let snake_row = animated_snake_preview(frame_tick);
+    lines.push(Line::from(Span::styled(snake_row, theme.snake_body)));
+    lines.push(Line::from(format!(
+        "Tick speed   {} ms",
+        game.tick_interval_ms()
+    )));
+
+    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
+}
+
+fn render_menu_footer(frame: &mut Frame, area: Rect, theme: &Theme) {
+    let text = Line::from(vec![
+        Span::styled(" Enter ", theme.help_key),
+        Span::raw("select  "),
+        Span::styled(" Up/Down ", theme.help_key),
+        Span::raw("move  "),
+        Span::styled(" Left/Right ", theme.help_key),
+        Span::raw("change  "),
+        Span::styled(" Q/Esc ", theme.help_key),
+        Span::raw("quit"),
+    ]);
+    frame.render_widget(
+        Paragraph::new(text)
+            .alignment(Alignment::Center)
+            .style(theme.status_bar),
+        area,
+    );
+}
+
+fn draw_oxide_rain(frame: &mut Frame, area: Rect, theme: &Theme, frame_tick: u64) {
+    if area.width == 0 || area.height == 0 {
+        return;
+    }
+
+    const GLYPHS: &[u8] = b"RUST01<>[]{}fnletmut";
+    let columns = area.width;
+
+    for x in 0..columns {
+        let speed = 1 + (x as u64 % 4);
+        let head = ((frame_tick / speed + x as u64 * 7) % area.height as u64) as u16;
+        let stream_len = 4 + (x % 7);
+
+        for tail in 0..stream_len {
+            let y = head.saturating_sub(tail);
+            if y >= area.height {
+                continue;
+            }
+
+            let glyph_index =
+                ((x as u64 * 13 + y as u64 * 5 + frame_tick) % GLYPHS.len() as u64) as usize;
+            let ch = GLYPHS[glyph_index] as char;
+            let style = if tail == 0 {
+                theme.rain_head
+            } else if tail < 3 {
+                theme.rain_mid
+            } else {
+                theme.rain_tail
+            };
+            let rect = Rect {
+                x: area.x + x,
+                y: area.y + y,
+                width: 1,
+                height: 1,
+            };
+            frame.render_widget(Paragraph::new(ch.to_string()).style(style), rect);
+        }
+    }
+}
+
+fn animated_snake_preview(frame_tick: u64) -> String {
+    let offset = (frame_tick as usize / 8) % 12;
+    let mut row = String::from("            ");
+    row.replace_range(offset..offset + 1, "@");
+    for tail in 1..5 {
+        if offset >= tail {
+            row.replace_range(offset - tail..offset - tail + 1, "o");
+        }
+    }
+    row.push_str("   *");
+    row
+}
+
 /// Render the playfield: border, optional grid dots, snake segments, food.
 ///
-/// Each logical game cell is drawn as a `cell_w × cell_h` character block so
+/// Each logical game cell is drawn as a `cell_w x cell_h` character block so
 /// the board always fills the available space, even at different terminal sizes.
 fn render_board(frame: &mut Frame, game: &Game, area: Rect, theme: &Theme, show_grid: bool) {
     let inner = inset(area, 1);
@@ -127,12 +376,12 @@ fn render_board(frame: &mut Frame, game: &Game, area: Rect, theme: &Theme, show_
             cell_w,
             cell_h,
             style,
-            if i == 0 { "◉" } else { "█" },
+            if i == 0 { "@" } else { "#" },
         );
     }
 
     draw_cell(
-        frame, offset_x, offset_y, game.food, cell_w, cell_h, theme.food, "♦",
+        frame, offset_x, offset_y, game.food, cell_w, cell_h, theme.food, "*",
     );
 }
 
@@ -150,7 +399,7 @@ fn draw_grid(
     for y in 0..gh {
         for x in 0..gw {
             let rect = cell_rect(ox, oy, Point { x, y }, cw, ch);
-            let dot = Paragraph::new("·").style(theme.grid);
+            let dot = Paragraph::new(".").style(theme.grid);
             frame.render_widget(dot, rect);
         }
     }
@@ -263,7 +512,7 @@ fn render_sidebar(
     let help = vec![
         Line::from(Span::styled("Controls", theme.sidebar_title)),
         Line::from(""),
-        help_line("Move", "↑↓←→ WASD", theme),
+        help_line("Move", "Arrows WASD", theme),
         help_line("Pause", "Space", theme),
         help_line("Restart", "R", theme),
         help_line("Quit", "Q Esc", theme),
@@ -303,15 +552,15 @@ fn render_status_bar(
 
     let text = Line::from(vec![
         Span::styled(" NailSnake ", theme.title),
-        Span::raw(" │ "),
+        Span::raw(" | "),
         Span::raw(os_label),
-        Span::raw(" │ "),
+        Span::raw(" | "),
         Span::raw(phase_hint),
-        Span::raw(" │ "),
+        Span::raw(" | "),
         Span::raw(format!("score {}", game.score)),
-        Span::raw(" │ "),
+        Span::raw(" | "),
         Span::raw(format!("best {}", config.stats.high_score)),
-        Span::raw(" │ "),
+        Span::raw(" | "),
         Span::raw(format!("games {}", config.stats.games_played)),
     ]);
 
