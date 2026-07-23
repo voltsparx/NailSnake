@@ -43,13 +43,13 @@ pub const MIN_TERM_HEIGHT: u16 = 22;
 
 /// Refuse to run if stdout is piped, redirected, or otherwise non-interactive.
 ///
-/// The game needs raw mode and an alternate screen — neither works in a CI
+/// The game needs raw mode and an alternate screen - neither works in a CI
 /// log or a file redirect.
 pub fn ensure_interactive_terminal() -> Result<()> {
     if !stdout().is_tty() {
         bail!(
             "NailSnake requires an interactive terminal (TTY).\n\
-             Run it from Windows Terminal, PowerShell, cmd, or a Linux/macOS shell — not from a pipe or CI log."
+             Run it from Windows Terminal, PowerShell, cmd, or a Linux/macOS shell - not from a pipe or CI log."
         );
     }
     Ok(())
@@ -59,7 +59,7 @@ pub fn ensure_terminal_size(width: u16, height: u16) -> Result<()> {
     if width < MIN_TERM_WIDTH || height < MIN_TERM_HEIGHT {
         bail!(
             "Terminal too small ({width}x{height}). NailSnake needs at least \
-             {MIN_TERM_WIDTH}x{MIN_TERM_HEIGHT} columns×rows.\n\
+             {MIN_TERM_WIDTH}x{MIN_TERM_HEIGHT} columns x rows.\n\
              Resize your terminal window and try again."
         );
     }
