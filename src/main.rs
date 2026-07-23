@@ -12,7 +12,7 @@ use crate::app::App;
 #[command(
     name = "nailsnake",
     version,
-    about = "NailSnake — cross-platform terminal Snake (Windows, Linux, macOS)",
+    about = "NailSnake - cross-platform terminal Snake (Windows, Linux, macOS)",
     long_about = "NailSnake is a full-screen TUI snake game inspired by nsnake, \
                   built in Rust for safety and smooth terminal rendering on Windows, \
                   Linux, and macOS. See `man nailsnake` for the full manual.",
