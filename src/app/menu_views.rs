@@ -27,8 +27,7 @@ impl App {
                 title: "Controls".to_string(),
                 items: vec![format!("Press a key for {}", capture.label())],
                 selected: None,
-                hint: "Esc is allowed, but avoid binding it if you still want quick quit."
-                    .to_string(),
+                hint: "Press Esc to cancel, or choose a key to bind.".to_string(),
             });
         }
 

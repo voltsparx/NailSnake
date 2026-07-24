@@ -52,6 +52,10 @@ impl App {
         }
 
         if let Some(capture) = self.capture_key {
+            if Self::is_capture_key_cancel(key) {
+                self.capture_key = None;
+                return Ok(false);
+            }
             self.assign_key(capture, key.code);
             self.capture_key = None;
             return Ok(false);
@@ -322,6 +326,10 @@ impl App {
         }
     }
 
+    fn is_capture_key_cancel(key: KeyEvent) -> bool {
+        key.code == KeyCode::Esc
+    }
+
     fn main_menu_len(&self) -> usize {
         if self.saved_game_available {
             7
@@ -360,5 +368,23 @@ impl App {
                 .copied()
                 .unwrap_or(MainMenuAction::Quit)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use super::App;
+
+    #[test]
+    fn capture_key_cancel_esc() {
+        let key = KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE);
+        assert!(App::is_capture_key_cancel(key));
+    }
+
+    #[test]
+    fn capture_key_not_cancel_for_other_keys() {
+        let key = KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE);
+        assert!(!App::is_capture_key_cancel(key));
     }
 }
