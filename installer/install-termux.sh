@@ -46,12 +46,14 @@ fi
 
 mkdir -p "$DIST_DIR"
 say "Building $DISPLAY_NAME release binary for Termux..."
+say "This may take a while on first run. (profile: release-installer)"
 cd "$ROOT_DIR"
-cargo build --release --locked --verbose
+cargo build --profile release-installer --locked --verbose
 
+say "Build complete."
 rm -rf "$STAGE_DIR"
 mkdir -p "$STAGE_DIR/bin" "$STAGE_DIR/share/man/man1" "$STAGE_DIR/share/doc/$APP_NAME"
-cp "$ROOT_DIR/target/release/$APP_NAME" "$STAGE_DIR/bin/$APP_NAME"
+cp "$ROOT_DIR/target/release-installer/$APP_NAME" "$STAGE_DIR/bin/$APP_NAME"
 cp "$ROOT_DIR/man/$APP_NAME.1" "$STAGE_DIR/share/man/man1/$APP_NAME.1"
 cp "$ROOT_DIR/README.md" "$STAGE_DIR/share/doc/$APP_NAME/README.md"
 cp "$ROOT_DIR/LICENSE" "$STAGE_DIR/share/doc/$APP_NAME/LICENSE"

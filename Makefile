@@ -26,7 +26,7 @@ MAN_PAGE    := $(MAN1DIR)/$(BIN).1
 all: build
 
 build:
-	$(CARGO) build --release --locked
+	$(CARGO) build --profile release-installer --locked --verbose
 
 debug:
 	$(CARGO) build --locked
@@ -79,7 +79,7 @@ dist: build
 	$(eval VERSION := $(shell $(CARGO) metadata --no-deps --format-version 1 2>/dev/null | sed -n 's/.*"version":"\([^"]*\)".*/\1/p'))
 	$(eval DIST_DIR := $(BIN)-$(VERSION))
 	mkdir -p $(DIST_DIR)
-	cp -r target/release/$(BIN) README.md LICENSE man/ scripts/ $(DIST_DIR)/
+	cp -r target/release-installer/$(BIN) README.md LICENSE man/ scripts/ $(DIST_DIR)/
 	tar czf $(DIST_DIR).tar.gz $(DIST_DIR)
 	rm -rf $(DIST_DIR)
 	@echo "Created $(DIST_DIR).tar.gz"

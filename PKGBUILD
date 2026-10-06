@@ -13,7 +13,7 @@ sha256sums=()
 
 build() {
     cd "$startdir"
-    cargo build --release --locked
+    cargo build --profile release-installer --locked --verbose
 }
 
 check() {
@@ -23,7 +23,7 @@ check() {
 
 package() {
     cd "$startdir"
-    install -Dm755 "target/release/nailsnake" "$pkgdir/usr/bin/nailsnake"
+    install -Dm755 "target/release-installer/nailsnake" "$pkgdir/usr/bin/nailsnake"
     install -Dm644 "man/nailsnake.1" "$pkgdir/usr/share/man/man1/nailsnake.1"
     install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
     install -Dm644 "README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"

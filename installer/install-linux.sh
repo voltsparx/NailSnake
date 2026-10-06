@@ -145,7 +145,7 @@ prepare_stage() {
     rm -rf "$STAGE_DIR"
     mkdir -p "$STAGE_DIR/$prefix/bin" "$STAGE_DIR/$prefix/share/man/man1" \
         "$STAGE_DIR/$prefix/share/doc/$APP_NAME" "$STAGE_DIR/$prefix/share/licenses/$APP_NAME"
-    cp "$ROOT_DIR/target/release/$APP_NAME" "$STAGE_DIR/$prefix/bin/$APP_NAME"
+    cp "$ROOT_DIR/target/release-installer/$APP_NAME" "$STAGE_DIR/$prefix/bin/$APP_NAME"
     cp "$ROOT_DIR/man/$APP_NAME.1" "$STAGE_DIR/$prefix/share/man/man1/$APP_NAME.1"
     cp "$ROOT_DIR/README.md" "$STAGE_DIR/$prefix/share/doc/$APP_NAME/README.md"
     cp "$ROOT_DIR/LICENSE" "$STAGE_DIR/$prefix/share/licenses/$APP_NAME/LICENSE"
@@ -154,7 +154,7 @@ prepare_stage() {
 build_binary() {
     say "Building $DISPLAY_NAME release binary..."
     cd "$ROOT_DIR"
-    cargo build --release --locked --verbose
+    cargo build --profile release-installer --locked --verbose
 }
 
 build_arch_package() {
@@ -211,10 +211,10 @@ rich terminal colors, and a manual page.
 %autosetup
 
 %build
-cargo build --release --locked --verbose
+cargo build --profile release-installer --locked --verbose
 
 %install
-install -Dm755 target/release/$APP_NAME %{buildroot}%{_bindir}/$APP_NAME
+install -Dm755 target/release-installer/$APP_NAME %{buildroot}%{_bindir}/$APP_NAME
 install -Dm644 man/$APP_NAME.1 %{buildroot}%{_mandir}/man1/$APP_NAME.1
 install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 install -Dm644 README.md %{buildroot}%{_docdir}/%{name}/README.md
@@ -316,19 +316,39 @@ main() {
 
     kind=$(choose_format)
     install_prerequisites "$kind"
+    say ""
+    say "Building $DISPLAY_NAME release binary..."
+    say "This may take a while on first run. (profile: release-installer)"
     build_binary
+    say "Build complete."
 
+    say ""
+    say "Creating package..."
     case "$kind" in
-        pkg.tar.zst) package=$(build_arch_package) ;;
-        deb) package=$(build_deb_package) ;;
-        rpm) package=$(build_rpm_package) ;;
-        xbps) package=$(build_xbps_package) ;;
-        tar.gz) package=$(build_tar_package) ;;
+        pkg.tar.zst)
+            say "Building Arch Linux package (pkg.tar.zst)..."
+            package=$(build_arch_package)
+            ;;
+        deb)
+            say "Building Debian package (deb)..."
+            package=$(build_deb_package)
+            ;;
+        rpm)
+            say "Building RPM package..."
+            package=$(build_rpm_package)
+            ;;
+        xbps)
+            say "Building XBPS package..."
+            package=$(build_xbps_package)
+            ;;
+        tar.gz)
+            say "Building tar.gz archive..."
+            package=$(build_tar_package)
+            ;;
         *) say "Unsupported package type: $kind"; exit 1 ;;
     esac
-
-    say "Created package: $package"
-    if ask_yes_no "Install it now?" "n"; then
+    say "Package created: $package"
+    if ask_yes_no "Install it system-wide? (requires sudo)" "n"; then
         install_package "$package"
         say "$DISPLAY_NAME installed. Run: $APP_NAME"
     else

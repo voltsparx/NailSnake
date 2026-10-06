@@ -9,7 +9,7 @@ $AppName = "nailsnake"
 $DisplayName = "NailSnake"
 $RootDir = Resolve-Path (Join-Path $PSScriptRoot "..")
 $CargoToml = Join-Path $RootDir "Cargo.toml"
-$ExePath = Join-Path $RootDir "target\release\nailsnake.exe"
+$ExePath = Join-Path $RootDir "target\release-installer\nailsnake.exe"
 
 function Get-CargoVersion {
     param([string]$ManifestPath)
@@ -81,12 +81,14 @@ if ($Scope -eq "Machine" -and -not (Test-Admin)) {
 }
 
 Write-Host "Building $DisplayName release binary..."
+Write-Host "This may take a while on first run. (profile: release-installer)"
 Push-Location $RootDir
 try {
-    cargo build --release --locked --verbose
+    cargo build --profile release-installer --locked --verbose
 } finally {
     Pop-Location
 }
+Write-Host "Build complete."
 
 if ($Scope -eq "Machine") {
     $InstallDir = Join-Path $env:ProgramFiles $DisplayName
