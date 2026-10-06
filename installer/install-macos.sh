@@ -55,7 +55,7 @@ fi
 mkdir -p "$DIST_DIR"
 say "Building $DISPLAY_NAME release binary..."
 cd "$ROOT_DIR"
-cargo build --release --locked
+    cargo build --release --locked --verbose
 
 rm -rf "$STAGE_DIR"
 mkdir -p "$STAGE_DIR/usr/local/bin" "$STAGE_DIR/usr/local/share/man/man1" \

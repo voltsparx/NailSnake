@@ -154,7 +154,7 @@ prepare_stage() {
 build_binary() {
     say "Building $DISPLAY_NAME release binary..."
     cd "$ROOT_DIR"
-    cargo build --release --locked
+    cargo build --release --locked --verbose
 }
 
 build_arch_package() {
@@ -211,7 +211,7 @@ rich terminal colors, and a manual page.
 %autosetup
 
 %build
-cargo build --release --locked
+cargo build --release --locked --verbose
 
 %install
 install -Dm755 target/release/$APP_NAME %{buildroot}%{_bindir}/$APP_NAME

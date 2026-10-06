@@ -47,7 +47,7 @@ fi
 mkdir -p "$DIST_DIR"
 say "Building $DISPLAY_NAME release binary for Termux..."
 cd "$ROOT_DIR"
-cargo build --release --locked
+cargo build --release --locked --verbose
 
 rm -rf "$STAGE_DIR"
 mkdir -p "$STAGE_DIR/bin" "$STAGE_DIR/share/man/man1" "$STAGE_DIR/share/doc/$APP_NAME"

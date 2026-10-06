@@ -83,7 +83,7 @@ if ($Scope -eq "Machine" -and -not (Test-Admin)) {
 Write-Host "Building $DisplayName release binary..."
 Push-Location $RootDir
 try {
-    cargo build --release --locked
+    cargo build --release --locked --verbose
 } finally {
     Pop-Location
 }

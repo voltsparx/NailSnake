@@ -7,14 +7,38 @@
 [![Tests](https://img.shields.io/badge/tests-15%2F15-passing-brightgreen)](https://github.com/voltsparx/NailSnake/actions)
 [![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20|%20Linux%20|%20macOS-blue)]()
 
-A polished, full-screen terminal snake game written in Rust.  NailSnake runs on
-**Windows**, **Linux**, and **macOS** - dropping you into the alternate screen
-buffer with raw keyboard input, just like vim or neovim.  It *feels* like a
+A polished, full-screen terminal Snake game written in Rust. NailSnake runs on
+**Windows**, **Linux**, and **macOS** — dropping you into the alternate screen
+buffer with raw keyboard input, just like vim or neovim. It *feels* like a
 lightweight GUI without ever leaving your terminal.
 
 > Inspired by [nsnake](https://github.com/alexdantas/nSnake), rebuilt with
 > Rust's safety guarantees, richer colour palettes, persistent high-scores,
 > and a proper `man` page.
+
+---
+
+## Table of contents
+
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Installation](#installation)
+  - [Cargo](#cargo)
+  - [Linux](#linux)
+  - [Termux](#termux)
+  - [macOS](#macos)
+  - [Windows](#windows)
+  - [Man page](#man-page)
+- [Usage](#usage)
+  - [Controls](#controls)
+  - [CLI options](#cli-options)
+  - [Examples](#examples)
+- [Configuration & save files](#configuration--save-files)
+- [Requirements](#requirements)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
 
 ---
 
@@ -24,11 +48,11 @@ lightweight GUI without ever leaving your terminal.
 |------------|--------|
 | **Cross-platform** | Windows Terminal, PowerShell, cmd, Linux VTs, macOS Terminal, iTerm2 |
 | **Vim-like TUI** | Alternate screen, hidden cursor, status bar, sidebar info panel |
-| **Rich colours** | Truecolor, 256-colour, and basic ANSI - auto-detected or forced with `--color` |
+| **Rich colours** | Truecolor, 256-colour, and basic ANSI — auto-detected or forced with `--color` |
 | **Safe terminal handling** | Restores your shell on quit, panic, or Ctrl+C |
 | **Continue game** | Saves an active session on quit/force-quit and offers Continue on next launch |
 | **Safe resize** | Keeps the logical game intact; small windows show a resize warning |
-| **Difficulty presets** | Chill, Normal, Hard, Insane - each with progressive speed-up |
+| **Difficulty presets** | Chill, Normal, Hard, Insane — each with progressive speed-up |
 | **Arcade menu** | nSnake-inspired main menu with settings, help, and an animated Rust-themed backdrop |
 | **Wrap mode** | Optional wall-wrapping instead of instant death |
 | **Persistent settings** | Settings, key bindings, high score, and games played survive restart |
@@ -39,65 +63,63 @@ lightweight GUI without ever leaving your terminal.
 ## Quick start
 
 ```bash
-# Run in one shot - no install needed
 cargo run --release
+```
 
-# Or install globally
+Or install globally:
+
+```bash
 cargo install --path .
 ```
 
-## Packaging And Installers
+---
 
-NailSnake includes packaging helpers for release builds:
+## Installation
+
+### Cargo
 
 ```bash
-# Arch Linux package with makepkg
-makepkg -f
+cargo install --path .
+```
 
-# Linux interactive packager/installer
+### Linux
+
+```bash
 ./installer/install-linux.sh
+```
 
-# Termux on Android
+Interactive installer that detects the active package manager
+(`apt`, `pacman`, `dnf`, `zypper`, `xbps`, `yum`, or `apk`) and can create
+`.deb`, `.pkg.tar.zst`, `.rpm`, `.xbps`, or generic `.tar.gz` packages.
+
+### Termux
+
+```bash
 ./installer/install-termux.sh
+```
 
-# macOS .pkg builder/installer
+Builds a Termux-native binary, creates a `.tar.gz` archive,
+and can install it into `$PREFIX/bin`.
+
+### macOS
+
+```bash
 ./installer/install-macos.sh
 ```
 
+Creates a CLI-only `.pkg` that installs to `/usr/local/bin`.
+
+### Windows
+
 ```powershell
-# Windows PowerShell installer
 .\installer\install-windows.ps1
-
-# cmd.exe wrapper
-.\installer\install-windows.cmd
 ```
 
-The Linux installer detects the active package manager (`apt`, `pacman`, `dnf`,
-`zypper`, `xbps`, `yum`, or `apk`) and can create `.deb`, `.pkg.tar.zst`,
-`.rpm`, `.xbps`, or generic `.tar.gz` packages. It checks prerequisites first,
-asks before installing missing tools, then asks again before installing the
-created package.
+Builds `nailsnake.exe`, installs it under either the current user's local
+Programs directory or `Program Files`, and updates PATH so both `cmd.exe` and
+PowerShell can run `nailsnake` from a new terminal window.
 
-The Termux installer builds a Termux-native binary, creates a `.tar.gz` archive,
-and can install it into `$PREFIX/bin`.
-
-The macOS installer creates a CLI-only `.pkg` that installs to `/usr/local/bin`
-and does not create an app launcher icon.
-
-The Windows installer builds `nailsnake.exe`, installs it under either the
-current user's local Programs directory or `Program Files`, and updates PATH so
-both cmd.exe and PowerShell can run `nailsnake` from a new terminal window.
-
-### Linux / macOS - binary + man page
-
-```bash
-make install                    # /usr/local/bin + man page
-# user-local (no root):
-PREFIX=$HOME/.local make install
-export MANPATH="$HOME/.local/share/man:${MANPATH:-}"
-```
-
-Or the man page alone:
+### Man page
 
 ```bash
 ./scripts/install-man.sh
@@ -111,26 +133,11 @@ Then:
 man nailsnake
 ```
 
-### Windows
-
-Build and run in **Windows Terminal**, PowerShell, or cmd:
-
-```powershell
-cargo install --path .
-nailsnake
-```
-
-Windows has no built-in `man`.  Install the manual for **Git Bash / MSYS2**:
-
-```powershell
-.\scripts\install-man.ps1 -UserLocal
-```
-
-Or read the man source at `man/nailsnake.1`, or use `nailsnake --help`.
-
 ---
 
-## Controls
+## Usage
+
+### Controls
 
 | Key | Action |
 |-----|--------|
@@ -142,9 +149,7 @@ Or read the man source at `man/nailsnake.1`, or use `nailsnake --help`.
 | `Esc` | Pause, go back, or quit from the main menu depending on context |
 | `Ctrl+C` | Force quit (terminal restored) |
 
----
-
-## CLI options
+### CLI options
 
 ```
 nailsnake [OPTIONS]
@@ -159,9 +164,7 @@ Options:
   -V, --version                  print version
 ```
 
----
-
-## Examples
+### Examples
 
 ```bash
 # Casual
@@ -182,7 +185,7 @@ man nailsnake
 
 ---
 
-## Settings and save files
+## Configuration & save files
 
 | OS | Path |
 |----|------|
@@ -204,23 +207,27 @@ file before replacement; invalid or incompatible snapshots are discarded.
 - **Terminal**: full UI at **90x28**; compact/minimal layouts down to **50x18**
 - **Interactive TTY** (not a piped or scripted session)
 
+---
+
 ## Documentation
 
 Detailed documentation lives in [`docs/`](docs/).
+
+---
 
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development setup, pull request
 guidelines, and code style conventions.
 
+---
+
 ## Security
 
 See [`SECURITY.md`](SECURITY.md) for supported versions and how to report
 vulnerabilities.
 
-## Attribution
-
-**Author:** Voltsparx - **Contact:** [voltsparx@gmail.com](mailto:voltsparx@gmail.com)
+---
 
 ## License
 
