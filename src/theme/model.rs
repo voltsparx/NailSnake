@@ -1,12 +1,14 @@
 use ratatui::style::Style;
+use serde::{Deserialize, Serialize};
 
 /// Colour-capability tiers that the game can target.
 ///
 /// The theme constructor picks the best palette based on the detected or
 /// user-forced capability, so the game looks good on modern and minimal
 /// terminals.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ColorMode {
+    #[default]
     Auto,
     TrueColor,
     Ansi256,

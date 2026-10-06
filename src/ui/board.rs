@@ -52,6 +52,9 @@ pub fn render_board(
     }
 
     for (i, segment) in game.snake.iter().enumerate() {
+        if segment.x >= game.width || segment.y >= game.height {
+            continue;
+        }
         let style = theme.snake_segment(i, game.snake.len());
         draw_cell(
             frame,
@@ -66,14 +69,19 @@ pub fn render_board(
     }
 
     for wall in &game.walls {
+        if wall.x >= game.width || wall.y >= game.height {
+            continue;
+        }
         draw_cell(
             frame, offset_x, offset_y, *wall, cell_w, cell_h, theme.wall, "X",
         );
     }
 
-    draw_cell(
-        frame, offset_x, offset_y, game.food, cell_w, cell_h, theme.food, "*",
-    );
+    if game.food.x < game.width && game.food.y < game.height {
+        draw_cell(
+            frame, offset_x, offset_y, game.food, cell_w, cell_h, theme.food, "*",
+        );
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -108,6 +116,13 @@ fn draw_cell(
     glyph: &str,
 ) {
     let rect = cell_rect(ox, oy, point, cw, ch);
+    if rect.width == 0
+        || rect.height == 0
+        || rect.x >= frame.area().right()
+        || rect.y >= frame.area().bottom()
+    {
+        return;
+    }
     let cell = Paragraph::new(glyph).style(style);
     frame.render_widget(cell, rect);
 }

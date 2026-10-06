@@ -3,9 +3,7 @@ pub mod app;
 use anyhow::Result;
 use clap::{ArgAction, Parser, ValueEnum};
 use nailsnake::config::{Difficulty, GameConfig};
-use nailsnake::platform::{
-    detect_color_mode, ensure_hardware_resources, ensure_interactive_terminal,
-};
+use nailsnake::platform::{detect_color_mode, ensure_interactive_terminal};
 use nailsnake::theme::ColorMode;
 
 use crate::app::App;
@@ -13,7 +11,7 @@ use crate::app::App;
 #[derive(Parser)]
 #[command(
     name = "nailsnake",
-    version = "v1.0",
+    version = env!("CARGO_PKG_VERSION"),
     about = "NailSnake - cross-platform terminal Snake (Windows, Linux, macOS)",
     long_about = "NailSnake is a full-screen TUI snake game inspired by nsnake, \
                   built in Rust for safety and smooth terminal rendering on Windows, \
@@ -21,17 +19,17 @@ use crate::app::App;
     after_help = "Full manual: man nailsnake\nAuthor: Voltsparx <voltsparx@gmail.com>"
 )]
 struct Cli {
-    #[arg(short, long, default_value = "normal")]
-    difficulty: DifficultyArg,
+    #[arg(short, long)]
+    difficulty: Option<DifficultyArg>,
+
+    #[arg(short, long, action = ArgAction::SetTrue)]
+    wrap: Option<bool>,
 
     #[arg(short, long)]
-    wrap: bool,
+    color: Option<ColorArg>,
 
-    #[arg(short, long, default_value = "auto")]
-    color: ColorArg,
-
-    #[arg(short, long)]
-    grid: bool,
+    #[arg(short, long, action = ArgAction::SetTrue)]
+    grid: Option<bool>,
 
     #[arg(long, action = ArgAction::SetTrue)]
     about: bool,
@@ -92,19 +90,24 @@ fn run() -> Result<()> {
         return Ok(());
     }
 
-    ensure_hardware_resources()?;
     ensure_interactive_terminal()?;
 
-    let color_mode = detect_color_mode(cli.color.into());
+    let color_mode = cli.color.map(Into::into);
 
-    let config = GameConfig::load(cli.difficulty.into(), cli.wrap, color_mode, cli.grid)?;
+    let mut config = GameConfig::load(
+        cli.difficulty.map(Into::into),
+        cli.wrap,
+        color_mode,
+        cli.grid,
+    )?;
+    config.color_mode = detect_color_mode(config.color_mode);
     let mut app = App::new(config)?;
     app.run()
 }
 
 fn print_about() {
     println!(
-        "NailSnake v1.0\n\
+        "NailSnake v{}\n\
          Cross-platform terminal Snake written in Rust.\n\n\
          Author: voltsparx (Niyor Kalita)\n\
          Contact: voltsparx@gmail.com\n\
@@ -112,6 +115,7 @@ fn print_about() {
          License: MIT\n\n\
          Features: nsnake-style menus, Rust-themed terminal UI, persistent stats,\n\
          Continue-game recovery, configurable speed/keybinds/skins, and installers\n\
-         for Linux, Termux, macOS, and Windows."
+         for Linux, Termux, macOS, and Windows.",
+        env!("CARGO_PKG_VERSION")
     );
 }

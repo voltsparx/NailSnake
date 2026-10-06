@@ -14,6 +14,7 @@ pub fn render_status_bar(
     area: Rect,
     theme: &Theme,
     os_label: &str,
+    notice: Option<&str>,
 ) {
     let phase_hint = match game.phase {
         GamePhase::Running => "Playing",
@@ -22,7 +23,7 @@ pub fn render_status_bar(
         GamePhase::Menu => "Press Enter",
     };
 
-    let text = Line::from(vec![
+    let full = Line::from(vec![
         Span::styled(" NailSnake ", theme.title),
         Span::raw(" | "),
         Span::raw(os_label),
@@ -36,6 +37,13 @@ pub fn render_status_bar(
         Span::raw(format!("games {}", config.stats.games_played)),
     ]);
 
+    let text = if let Some(notice) = notice {
+        Line::from(format!(" NailSnake | {notice}"))
+    } else if area.width < 70 {
+        Line::from(format!(" NailSnake | {phase_hint} | {}", game.score))
+    } else {
+        full
+    };
     let bar = Paragraph::new(text)
         .style(theme.status_bar)
         .alignment(Alignment::Left);

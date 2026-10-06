@@ -15,6 +15,7 @@ pub fn render_sidebar(
     area: Rect,
     theme: &Theme,
     os_label: &str,
+    controls: &[String],
 ) {
     let block = Block::default()
         .borders(Borders::ALL)
@@ -35,7 +36,7 @@ pub fn render_sidebar(
 
     render_score(frame, game, config, chunks[0], theme);
     render_session(frame, game, config, chunks[1], theme, os_label);
-    render_controls(frame, chunks[2], theme);
+    render_controls(frame, chunks[2], theme, controls);
 }
 
 fn render_score(frame: &mut Frame, game: &Game, config: &GameConfig, area: Rect, theme: &Theme) {
@@ -94,30 +95,24 @@ fn render_session(
     frame.render_widget(Paragraph::new(info_lines).style(theme.sidebar), area);
 }
 
-fn render_controls(frame: &mut Frame, area: Rect, theme: &Theme) {
-    let help = vec![
+fn render_controls(frame: &mut Frame, area: Rect, theme: &Theme, controls: &[String]) {
+    let mut help = vec![
         Line::from(Span::styled("Controls", theme.sidebar_title)),
         Line::from(""),
-        help_line("Move", "Arrows WASD", theme),
-        help_line("Pause", "Space", theme),
-        help_line("Restart", "R", theme),
-        help_line("Quit", "Q Esc", theme),
-        Line::from(""),
-        Line::from(Span::styled("man nailsnake", theme.help_key)),
     ];
+    help.extend(
+        controls
+            .iter()
+            .map(|line| Line::from(Span::styled(line.clone(), theme.help_key))),
+    );
+    help.push(Line::from(""));
+    help.push(Line::from(Span::styled("man nailsnake", theme.help_key)));
     frame.render_widget(
         Paragraph::new(help)
             .style(theme.sidebar)
             .wrap(Wrap { trim: true }),
         area,
     );
-}
-
-fn help_line<'a>(action: &'a str, keys: &'a str, theme: &Theme) -> Line<'a> {
-    Line::from(vec![
-        Span::styled(format!("{action:<7}"), theme.help),
-        Span::styled(keys, theme.help_key),
-    ])
 }
 
 fn short_stats_hint() -> &'static str {

@@ -25,6 +25,16 @@ impl CaptureKey {
             CaptureKey::Pause => "Key Pause",
         }
     }
+
+    pub(super) fn action(self) -> super::key_bindings::Action {
+        match self {
+            CaptureKey::Up => super::key_bindings::Action::Up,
+            CaptureKey::Down => super::key_bindings::Action::Down,
+            CaptureKey::Left => super::key_bindings::Action::Left,
+            CaptureKey::Right => super::key_bindings::Action::Right,
+            CaptureKey::Pause => super::key_bindings::Action::Pause,
+        }
+    }
 }
 
 pub(super) fn settings_menu_len() -> usize {
@@ -36,5 +46,5 @@ pub(super) fn controls_menu_len() -> usize {
 }
 
 pub(super) fn pause_menu_len() -> usize {
-    4
+    5
 }

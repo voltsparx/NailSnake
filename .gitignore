@@ -13,12 +13,14 @@ build-scripts/test-root/
 
 # IDE & editors
 .vscode/
+.kilo/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
 Thumbs.db
+audit/
 
 # OS clutter
 desktop.ini

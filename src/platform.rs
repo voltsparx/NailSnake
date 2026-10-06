@@ -5,9 +5,6 @@ use crossterm::tty::IsTty;
 
 use crate::theme::ColorMode;
 
-mod resources;
-pub use resources::ensure_hardware_resources;
-
 /// Target operating system, determined at compile time via `cfg!`.
 ///
 /// We use this for platform-specific colour detection and stats path hints.
@@ -41,8 +38,8 @@ pub fn os_label() -> &'static str {
 }
 
 /// Minimum terminal size for a usable layout (board + sidebar + status bar).
-pub const MIN_TERM_WIDTH: u16 = 60;
-pub const MIN_TERM_HEIGHT: u16 = 22;
+pub const MIN_TERM_WIDTH: u16 = 20;
+pub const MIN_TERM_HEIGHT: u16 = 10;
 
 /// Refuse to run if stdout is piped, redirected, or otherwise non-interactive.
 ///
@@ -79,6 +76,10 @@ pub fn detect_color_mode(requested: ColorMode) -> ColorMode {
         return requested;
     }
 
+    if std::env::var_os("NO_COLOR").is_some() {
+        return ColorMode::Basic;
+    }
+
     if env_has_truecolor() {
         return ColorMode::TrueColor;
     }
@@ -99,7 +100,7 @@ pub fn detect_color_mode(requested: ColorMode) -> ColorMode {
                 ColorMode::Ansi256
             }
         }
-        Os::Macos | Os::Linux | Os::Other => ColorMode::Ansi256,
+        Os::Macos | Os::Linux | Os::Other => ColorMode::Basic,
     }
 }
 
@@ -110,14 +111,15 @@ fn env_has_truecolor() -> bool {
             lower.contains("truecolor") || lower.contains("24bit")
         })
         .unwrap_or(false)
-        || std::env::var("TRUECOLOR").is_ok()
+        || std::env::var("TRUECOLOR")
+            .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+            .unwrap_or(false)
 }
 
 fn env_has_256_color() -> bool {
     std::env::var("TERM")
-        .map(|t| t.contains("256") || t.contains("xterm"))
+        .map(|t| t.contains("256color"))
         .unwrap_or(false)
-        || std::env::var("COLORTERM").is_ok()
 }
 
 pub fn stats_hint() -> &'static str {

@@ -7,9 +7,20 @@ $ErrorActionPreference = "Stop"
 
 $AppName = "nailsnake"
 $DisplayName = "NailSnake"
-$Version = "1.0.0"
 $RootDir = Resolve-Path (Join-Path $PSScriptRoot "..")
+$CargoToml = Join-Path $RootDir "Cargo.toml"
 $ExePath = Join-Path $RootDir "target\release\nailsnake.exe"
+
+function Get-CargoVersion {
+    param([string]$ManifestPath)
+    $match = Select-String -Path $ManifestPath -Pattern '^version\s*=\s*"([^"]+)"' | Select-Object -First 1
+    if ($null -eq $match) {
+        throw "Could not read the package version from $ManifestPath."
+    }
+    return $match.Matches[0].Groups[1].Value
+}
+
+$Version = Get-CargoVersion -ManifestPath $CargoToml
 
 function Ask-Choice {
     param(
@@ -71,8 +82,11 @@ if ($Scope -eq "Machine" -and -not (Test-Admin)) {
 
 Write-Host "Building $DisplayName release binary..."
 Push-Location $RootDir
-cargo build --release --locked
-Pop-Location
+try {
+    cargo build --release --locked
+} finally {
+    Pop-Location
+}
 
 if ($Scope -eq "Machine") {
     $InstallDir = Join-Path $env:ProgramFiles $DisplayName
@@ -87,6 +101,9 @@ New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 Copy-Item -Path $ExePath -Destination (Join-Path $InstallDir "$AppName.exe") -Force
 Copy-Item -Path (Join-Path $RootDir "README.md") -Destination (Join-Path $InstallDir "README.md") -Force
 Copy-Item -Path (Join-Path $RootDir "LICENSE") -Destination (Join-Path $InstallDir "LICENSE") -Force
+$ManDir = Join-Path $InstallDir "share\man\man1"
+New-Item -ItemType Directory -Path $ManDir -Force | Out-Null
+Copy-Item -Path (Join-Path $RootDir "man\nailsnake.1") -Destination (Join-Path $ManDir "nailsnake.1") -Force
 
 $CurrentPath = [Environment]::GetEnvironmentVariable("Path", $PathTarget)
 $PathParts = @()
@@ -100,11 +117,9 @@ if ($PathParts -notcontains $InstallDir) {
     $env:Path = (($env:Path -split ';') + $InstallDir | Select-Object -Unique) -join ';'
 }
 
-[Environment]::SetEnvironmentVariable("NAILSNAKE_HOME", $InstallDir, $PathTarget)
-
 Write-Host "$DisplayName $Version installed to: $InstallDir"
 Write-Host "Environment updated for $Scope scope:"
 Write-Host "  PATH includes $InstallDir"
-Write-Host "  NAILSNAKE_HOME=$InstallDir"
+Write-Host "  Man page: $(Join-Path $ManDir 'nailsnake.1')"
 Write-Host ""
 Write-Host "Open a new cmd.exe or PowerShell window, then run: $AppName"

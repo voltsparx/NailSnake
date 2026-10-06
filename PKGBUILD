@@ -1,6 +1,6 @@
 # Maintainer: Voltsparx <voltsparx@gmail.com>
 pkgname=nailsnake
-pkgver=1.0.0
+pkgver=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' "$startdir/Cargo.toml" | head -n 1)
 pkgrel=1
 pkgdesc="Cross-platform terminal Snake game written in Rust"
 arch=('x86_64' 'aarch64')

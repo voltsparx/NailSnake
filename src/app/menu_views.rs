@@ -10,11 +10,16 @@ impl App {
             return Some(ui::MenuView {
                 title: "Help".to_string(),
                 items: vec![
-                    "Move: Arrow keys or WASD".to_string(),
-                    "Pause: Space or Enter".to_string(),
-                    "Restart: R".to_string(),
-                    "Help: H or ?".to_string(),
-                    "Quit: Q or Esc".to_string(),
+                    format!(
+                        "Move: {} {} {} {}",
+                        key_label(self.keys.up),
+                        key_label(self.keys.down),
+                        key_label(self.keys.left),
+                        key_label(self.keys.right)
+                    ),
+                    format!("Pause: {}", key_label(self.keys.pause)),
+                    "Restart: R; Help: H or ?".to_string(),
+                    "Esc pauses/back; Q opens the pause menu.".to_string(),
                     "Press Enter, H, ?, or Esc to close".to_string(),
                 ],
                 selected: None,
@@ -38,11 +43,15 @@ impl App {
                 items: vec![
                     "Resume".to_string(),
                     "Restart".to_string(),
+                    "Main Menu".to_string(),
                     "Help".to_string(),
-                    "Quit Game".to_string(),
+                    "Quit Application".to_string(),
                 ],
                 selected: Some(self.pause_menu_index),
-                hint: "Enter selects. Space resumes instantly.".to_string(),
+                hint: format!(
+                    "Enter selects. {} or Esc resumes.",
+                    key_label(self.keys.pause)
+                ),
             }),
             _ => None,
         }
@@ -81,7 +90,7 @@ impl App {
                     "Back".to_string(),
                 ],
                 selected: Some(self.settings_index),
-                hint: "Left/Right changes values. Enter toggles/selects.".to_string(),
+                hint: "Left/Right changes values. Applies to the next game.".to_string(),
             },
             MenuScreen::Controls => ui::MenuView {
                 title: "Controls".to_string(),
@@ -103,7 +112,7 @@ impl App {
                     "Author: voltsparx (Niyor Kalita)".to_string(),
                     "Contact: voltsparx@gmail.com".to_string(),
                     "Repo: github.com/voltsparx/NailSnake".to_string(),
-                    "Version: v1.0".to_string(),
+                    format!("Version: v{}", env!("CARGO_PKG_VERSION")),
                     "Press Enter or Esc to go back.".to_string(),
                 ],
                 selected: None,

@@ -8,6 +8,7 @@
 #   make uninstall      # remove installed files
 #   make test           # run tests
 #   make check          # cargo check
+#   make lint           # clippy plus ShellCheck for setup scripts
 #   make clean          # clean build artifacts
 #   make run            # run with cargo (args: ARGS="...")
 
@@ -20,21 +21,25 @@ BIN         := nailsnake
 MAN_SRC     := man/nailsnake.1
 MAN_PAGE    := $(MAN1DIR)/$(BIN).1
 
-.PHONY: all build debug install install-bin install-man uninstall test check clean run dist
+.PHONY: all build debug install install-bin install-man uninstall test check lint clean run dist
 
 all: build
 
 build:
-	$(CARGO) build --release
+	$(CARGO) build --release --locked
 
 debug:
-	$(CARGO) build
+	$(CARGO) build --locked
 
 check:
-	$(CARGO) check
+	$(CARGO) check --locked
 
 test:
-	$(CARGO) test
+	$(CARGO) test --locked
+
+lint:
+	$(CARGO) clippy --all-targets --all-features -- -D warnings
+	shellcheck installer/*.sh scripts/*.sh
 
 clean:
 	$(CARGO) clean

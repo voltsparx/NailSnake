@@ -5,7 +5,6 @@ mod menu_views;
 mod terminal;
 
 use std::io::Stdout;
-use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
@@ -31,8 +30,9 @@ pub struct App {
     game: Game,
     config: GameConfig,
     theme: Theme,
-    /// Timestamp of the last game tick - used to enforce the tick interval.
-    last_tick: Instant,
+    next_tick: Instant,
+    next_render: Instant,
+    animation_started: Instant,
     /// Prevents double-restore in Drop (e.g., if `run` errors and we also drop).
     restored: bool,
     main_menu_index: usize,
@@ -45,18 +45,22 @@ pub struct App {
     keys: KeyBindings,
     frame_tick: u64,
     saved_game_available: bool,
+    notice: Option<String>,
 }
 
 impl App {
     pub fn new(config: GameConfig) -> Result<Self> {
         install_panic_hook();
         let (terminal_width, terminal_height) = crossterm::terminal::size()?;
+        // A too-small terminal is rendered as a recoverable UI state.  Keep a
+        // small startup floor only so crossterm can initialize sanely.
         ensure_terminal_size(terminal_width, terminal_height)?;
 
         let terminal = initialize_terminal()?;
 
         let (board_w, board_h) = board_dimensions(terminal_width, terminal_height);
         let theme = Theme::new(config.color_mode);
+        let keys = KeyBindings::from_persisted(&config.key_bindings);
         let mut game = Game::with_options(
             board_w,
             board_h,
@@ -74,7 +78,9 @@ impl App {
             game,
             config,
             theme,
-            last_tick: Instant::now(),
+            next_tick: Instant::now(),
+            next_render: Instant::now(),
+            animation_started: Instant::now(),
             restored: false,
             main_menu_index: 0,
             settings_index: 0,
@@ -83,75 +89,91 @@ impl App {
             show_help: false,
             menu_screen: MenuScreen::Main,
             capture_key: None,
-            keys: KeyBindings::default(),
+            keys,
             frame_tick: 0,
             saved_game_available,
+            notice: None,
         })
     }
 
-    /// Main event loop: render, poll input, tick game, then cap frame rate.
-    ///
-    /// The polling interval adapts to the current game phase. While playing, we
-    /// poll at a finer grain (min of tick_ms and 50ms) so key presses feel
-    /// responsive even at slow difficulty speeds.
+    /// Fixed-step simulation, independent render cadence, and bounded event
+    /// draining keep input responsive even when drawing takes longer than a
+    /// frame.  Catch-up is deliberately capped to avoid a spiral of death.
     pub fn run(&mut self) -> Result<()> {
-        const TARGET_FPS: u64 = 30;
-        const FRAME_TIME: Duration = Duration::from_millis(1000 / TARGET_FPS);
+        const RENDER_INTERVAL: Duration = Duration::from_millis(16);
+        const MAX_CATCH_UP_TICKS: u8 = 4;
 
         loop {
-            let frame_start = Instant::now();
-            self.frame_tick = self.frame_tick.wrapping_add(1);
-            let menu = self.active_menu_view();
-
-            self.terminal.draw(|f| {
-                ui::render(
-                    f,
-                    &self.game,
-                    &self.config,
-                    &self.theme,
-                    os_label(),
-                    menu.as_ref(),
-                    self.frame_tick,
-                );
-            })?;
-
-            let tick_ms = self.game.tick_interval_ms();
-            let poll_ms = if self.game.phase == GamePhase::Running {
-                16
-            } else {
-                80
-            };
-
-            if event::poll(Duration::from_millis(poll_ms))? {
+            let mut should_exit = false;
+            for _ in 0..64 {
+                if !event::poll(Duration::ZERO)? {
+                    break;
+                }
                 match event::read()? {
-                    Event::Key(key) => {
-                        if self.handle_key(key)? {
-                            self.prepare_exit()?;
-                            break;
-                        }
-                    }
-                    Event::Resize(width, height) => {
-                        self.handle_resize(width, height)?;
-                    }
+                    Event::Key(key) => should_exit |= self.handle_key(key)?,
+                    Event::Resize(width, height) => self.handle_resize(width, height)?,
                     _ => {}
                 }
             }
-
-            if self.game.phase == GamePhase::Running
-                && self.last_tick.elapsed() >= Duration::from_millis(tick_ms)
-            {
-                let ended = self.game.tick();
-                self.last_tick = Instant::now();
-                if ended {
-                    let _ = self.config.record_game(self.game.score);
-                    let _ = self.config.clear_active_game();
-                    self.saved_game_available = false;
-                }
+            if should_exit {
+                self.prepare_exit()?;
+                break;
             }
 
-            let elapsed = frame_start.elapsed();
-            if elapsed < FRAME_TIME {
-                thread::sleep(FRAME_TIME - elapsed);
+            let now = Instant::now();
+            if self.game.phase == GamePhase::Running {
+                let mut ticks = 0;
+                while Instant::now() >= self.next_tick && ticks < MAX_CATCH_UP_TICKS {
+                    let ended = self.game.tick();
+                    self.next_tick += Duration::from_millis(self.game.tick_interval_ms());
+                    ticks += 1;
+                    if ended {
+                        if let Err(error) = self.config.record_game(self.game.score) {
+                            self.notice = Some(format!("Could not save statistics: {error}"));
+                        }
+                        if let Err(error) = self.config.clear_active_game() {
+                            self.notice = Some(format!("Could not clear saved game: {error}"));
+                        }
+                        self.saved_game_available = false;
+                        break;
+                    }
+                }
+                if ticks == MAX_CATCH_UP_TICKS && Instant::now() >= self.next_tick {
+                    self.next_tick =
+                        Instant::now() + Duration::from_millis(self.game.tick_interval_ms());
+                }
+            } else {
+                self.next_tick = now + Duration::from_millis(self.game.tick_interval_ms());
+            }
+
+            if now >= self.next_render {
+                self.frame_tick = self.animation_started.elapsed().as_millis() as u64 / 33;
+                let menu = self.active_menu_view();
+                let controls = self.control_labels();
+                self.terminal.draw(|f| {
+                    ui::render(
+                        f,
+                        &self.game,
+                        &self.config,
+                        &self.theme,
+                        os_label(),
+                        menu.as_ref(),
+                        self.frame_tick,
+                        self.notice.as_deref(),
+                        &controls,
+                    );
+                })?;
+                self.next_render = Instant::now() + RENDER_INTERVAL;
+            }
+
+            let deadline = if self.game.phase == GamePhase::Running {
+                self.next_tick.min(self.next_render)
+            } else {
+                self.next_render
+            };
+            let timeout = deadline.saturating_duration_since(Instant::now());
+            if !timeout.is_zero() {
+                let _ = event::poll(timeout)?;
             }
         }
 
@@ -170,7 +192,31 @@ impl App {
             }
             GamePhase::Menu => {}
         }
+        if let Err(error) = self.config.save_settings() {
+            self.notice = Some(format!("Could not save settings: {error}"));
+            return Err(error);
+        }
         Ok(())
+    }
+
+    pub(super) fn reset_tick_deadline(&mut self) {
+        self.next_tick = Instant::now() + Duration::from_millis(self.game.tick_interval_ms());
+    }
+
+    fn control_labels(&self) -> Vec<String> {
+        use key_bindings::key_label;
+        vec![
+            format!(
+                "Move  {} {} {} {}",
+                key_label(self.keys.up),
+                key_label(self.keys.down),
+                key_label(self.keys.left),
+                key_label(self.keys.right)
+            ),
+            format!("Pause {} / Esc", key_label(self.keys.pause)),
+            "Restart R".into(),
+            "Menu Q".into(),
+        ]
     }
 }
 

@@ -3,9 +3,9 @@ set -eu
 
 APP_NAME="nailsnake"
 DISPLAY_NAME="NailSnake"
-VERSION="1.0.0"
 REPO_URL="https://github.com/voltsparx/NailSnake"
-ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+ROOT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+VERSION=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' "$ROOT_DIR/Cargo.toml" | head -n 1)
 DIST_DIR="$ROOT_DIR/dist"
 STAGE_DIR="$DIST_DIR/stage-linux"
 
@@ -18,7 +18,7 @@ ask_yes_no() {
     default=${2:-n}
     if [ "$default" = "y" ]; then suffix="[Y/n]"; else suffix="[y/N]"; fi
     printf '%s %s ' "$prompt" "$suffix"
-    read answer
+    read -r answer
     answer=${answer:-$default}
     case "$answer" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }
@@ -41,12 +41,11 @@ sudo_cmd() {
 
 detect_os() {
     OS_ID=unknown
-    OS_LIKE=
     OS_NAME=$(uname -s)
     if [ -r /etc/os-release ]; then
+        # shellcheck disable=SC1091
         . /etc/os-release
         OS_ID=${ID:-unknown}
-        OS_LIKE=${ID_LIKE:-}
         OS_NAME=${PRETTY_NAME:-$OS_ID}
     fi
 }
@@ -292,7 +291,7 @@ choose_format() {
     say "  5) xbps          Void Linux"
     say "  6) tar.gz        generic fallback"
     printf 'Selection [recommended: %s]: ' "$FORMAT"
-    read choice
+    read -r choice
     case "${choice:-$FORMAT}" in
         1) printf '%s' "$FORMAT" ;;
         2|deb) printf '%s' "deb" ;;

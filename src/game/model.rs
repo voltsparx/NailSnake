@@ -47,13 +47,24 @@ pub enum GamePhase {
     Menu,
 }
 
+/// Format version for resumable game snapshots.  Keeping this with the pure
+/// game state makes incompatible saves fail closed instead of being guessed at.
+pub const SAVE_VERSION: u32 = 1;
+pub const MIN_BOARD_WIDTH: u16 = 4;
+pub const MIN_BOARD_HEIGHT: u16 = 4;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Game {
+    #[serde(default)]
+    pub save_version: u32,
     pub width: u16,
     pub height: u16,
     pub snake: VecDeque<Point>,
     pub direction: Direction,
-    pub pending_direction: Direction,
+    /// At most two turns may be buffered.  This is enough for a quick corner
+    /// without letting key repeat turn the game into a command backlog.
+    #[serde(default)]
+    pub direction_queue: VecDeque<Direction>,
     pub food: Point,
     pub score: u32,
     pub food_eaten: u32,

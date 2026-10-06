@@ -32,14 +32,24 @@ pub fn render_main_menu(
         ])
         .split(inset(area, 1));
 
-    let main = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Min(34), Constraint::Length(30)])
-        .split(outer[1]);
+    let compact = area.width < 80 || area.height < 24;
+    let main = if compact {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(0), Constraint::Min(8)])
+            .split(outer[1])
+    } else {
+        Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Min(34), Constraint::Length(30)])
+            .split(outer[1])
+    };
 
     render_logo(frame, outer[0], theme);
     render_menu_panel(frame, main[1], menu, theme, 100, 100);
-    render_attract_panel(frame, main[0], game, config, theme, frame_tick);
+    if !compact {
+        render_attract_panel(frame, main[0], game, config, theme, frame_tick);
+    }
     render_menu_footer(frame, outer[2], theme);
 }
 
@@ -82,7 +92,6 @@ pub fn render_menu_panel(
             Span::styled(marker, theme.menu_cursor),
             Span::styled(item.clone(), style),
         ]));
-        lines.push(Line::from(""));
     }
     lines.push(Line::from(Span::styled(menu.hint.clone(), theme.message)));
 

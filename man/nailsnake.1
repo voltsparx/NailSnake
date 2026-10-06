@@ -1,5 +1,5 @@
 .\" NailSnake manual page - compatible with man-db and BSD man(1).
-.TH NAILSNAKE 1 "July 2026" "NailSnake v1.0" "User Commands"
+.TH NAILSNAKE 1 "October 2026" "NailSnake" "User Commands"
 .SH NAME
 nailsnake \- full-screen terminal Snake game with rich colors
 .SH SYNOPSIS
@@ -19,8 +19,8 @@ The playfield is drawn with
 and
 .BR crossterm (7),
 with automatic color detection for truecolor, 256-color, and basic ANSI
-terminals. High scores and game counts are saved under the user configuration
-directory for your operating system.
+terminals. Settings, bindings, high scores, and game counts are saved under the
+user configuration directory for your operating system.
 .PP
 If an active game is saved after quitting or pressing Ctrl+C, the main menu
 shows a Continue option on the next launch.
@@ -45,7 +45,7 @@ instead of ending the game.
 Force color mode:
 .IR auto ,
 .IR truecolor ,
-.IR 256 ,
+.IR ansi256 ,
 or
 .IR basic
 (default:
@@ -67,11 +67,8 @@ Print version information and exit.
 .B Enter
 Start the game from the title screen.
 .TP
-.B Arrow keys
-Move the snake.
-.TP
-.B WASD
-Alternative movement keys.
+.B Configured movement keys
+Move the snake. Arrow keys are the default and can be changed in Controls.
 .TP
 .B Space
 Pause or resume.
@@ -79,9 +76,11 @@ Pause or resume.
 .B R
 Restart the current round.
 .TP
-.B Q
 .B Esc
-Quit and restore the terminal.
+Pause while playing, go back in a submenu, or quit from the main menu.
+.TP
+.B Q
+Open the pause menu while playing; quit from the main menu.
 .TP
 .B Ctrl+c
 Force quit, save an active game, and restore the terminal.
@@ -96,7 +95,7 @@ Force quit, save an active game, and restore the terminal.
 .I Windows
 %APPDATA%\\NailSnake\\stats.json
 .PP
-These files store the high score and total games played.
+These directories also contain settings.json, which stores game preferences and key bindings.
 .PP
 Active-game resume data is stored separately as active-game.json in the
 platform local data directory. Invalid or completed snapshots are ignored.
@@ -109,14 +108,12 @@ or
 .IR 24bit ,
 enables RGB color output.
 .TP
-.B TRUECOLOR
-If present, enables truecolor mode.
+.B NO_COLOR
+When set, forces the basic palette unless a color mode is explicitly requested.
 .TP
 .B TERM
 Terminal type; values containing
 .I 256
-or
-.I xterm
 hint at 256-color support.
 .TP
 .B WT_SESSION
@@ -142,7 +139,7 @@ Force 256-color palette on older terminals:
 .PP
 .RS
 .nf
-nailsnake \-\-color 256
+nailsnake \-\-color ansi256
 .fi
 .RE
 .SH INSTALLATION

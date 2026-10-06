@@ -27,11 +27,11 @@ lightweight GUI without ever leaving your terminal.
 | **Rich colours** | Truecolor, 256-colour, and basic ANSI - auto-detected or forced with `--color` |
 | **Safe terminal handling** | Restores your shell on quit, panic, or Ctrl+C |
 | **Continue game** | Saves an active session on quit/force-quit and offers Continue on next launch |
-| **Live resize** | Adapts seamlessly when the terminal window is resized |
+| **Safe resize** | Keeps the logical game intact; small windows show a resize warning |
 | **Difficulty presets** | Chill, Normal, Hard, Insane - each with progressive speed-up |
 | **Arcade menu** | nSnake-inspired main menu with settings, help, and an animated Rust-themed backdrop |
 | **Wrap mode** | Optional wall-wrapping instead of instant death |
-| **Persistent stats** | High score saved per OS config directory (see below) |
+| **Persistent settings** | Settings, key bindings, high score, and games played survive restart |
 | **Manual page** | `man nailsnake` after installing the man page |
 
 ---
@@ -135,11 +135,11 @@ Or read the man source at `man/nailsnake.1`, or use `nailsnake --help`.
 | Key | Action |
 |-----|--------|
 | `Enter` | Start from title screen |
-| Arrow keys | Move |
-| `W` `A` `S` `D` | Move (alternate) |
-| `Space` | Pause / resume |
+| Configured movement keys | Move (arrow keys by default) |
+| Configured pause key / `Esc` | Pause / resume |
 | `R` | Restart |
-| `Q` / `Esc` | Quit |
+| `Q` | Open the pause menu while playing; quit from the main menu |
+| `Esc` | Pause, go back, or quit from the main menu depending on context |
 | `Ctrl+C` | Force quit (terminal restored) |
 
 ---
@@ -150,10 +150,10 @@ Or read the man source at `man/nailsnake.1`, or use `nailsnake --help`.
 nailsnake [OPTIONS]
 
 Options:
-  -d, --difficulty <DIFFICULTY>  chill | normal | hard | insane [default: normal]
-  -w, --wrap                     wrap around walls
-  -c, --color <COLOR>            auto | truecolor | 256 | basic [default: auto]
-  -g, --grid                     show grid dots
+  -d, --difficulty <DIFFICULTY>  chill | normal | hard | insane
+  -w, --wrap                     wrap around walls for this launch
+  -c, --color <COLOR>            auto | truecolor | ansi256 | basic
+  -g, --grid                     show grid dots for this launch
       --about                    print project information
   -h, --help                     print help (see also: man nailsnake)
   -V, --version                  print version
@@ -182,25 +182,27 @@ man nailsnake
 
 ---
 
-## Stats file locations
+## Settings and save files
 
 | OS | Path |
 |----|------|
-| Linux / BSD | `~/.config/NailSnake/stats.json` |
-| macOS | `~/Library/Application Support/NailSnake/stats.json` |
-| Windows | `%APPDATA%\NailSnake\stats.json` |
+| Linux / BSD | `~/.config/NailSnake/settings.json`, `stats.json` |
+| macOS | `~/Library/Application Support/NailSnake/settings.json`, `stats.json` |
+| Windows | `%APPDATA%\NailSnake\settings.json`, `stats.json` |
 
-Active game resume data is stored separately from stats as `active-game.json`
-in the platform data directory. See [`docs/persistence.md`](docs/persistence.md).
+Active game resume data is stored separately as a versioned `active-game.json`
+in the platform data directory. Saves are written through a synced temporary
+file before replacement; invalid or incompatible snapshots are discarded.
+`NO_COLOR` forces the basic palette when `--color` is not supplied. See
+[`docs/persistence.md`](docs/persistence.md).
 
 ---
 
 ## Requirements
 
 - **Rust 1.70+** (edition 2021)
-- **Terminal** at least **60x22** characters
+- **Terminal**: full UI at **90x28**; compact/minimal layouts down to **50x18**
 - **Interactive TTY** (not a piped or scripted session)
-- Startup resource preflight must be able to reserve a small memory buffer and inspect CPU availability
 
 ## Documentation
 

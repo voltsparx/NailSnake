@@ -1,5 +1,6 @@
 use std::io::{self, stdout, Stdout, Write};
 use std::panic;
+use std::sync::Once;
 
 use anyhow::Result;
 use crossterm::terminal::{
@@ -33,26 +34,28 @@ pub(super) fn restore_terminal(
 }
 
 pub(super) fn install_panic_hook() {
-    let original = panic::take_hook();
-    panic::set_hook(Box::new(move |info| {
-        let _ = disable_raw_mode();
-        let mut stdout = stdout();
-        let _ = execute!(
-            stdout,
-            LeaveAlternateScreen,
-            cursor::Show,
-            crossterm::terminal::Clear(ClearType::All)
-        );
-        let _ = stdout.flush();
-        original(info);
-    }));
+    static INSTALLED: Once = Once::new();
+    INSTALLED.call_once(|| {
+        let original = panic::take_hook();
+        panic::set_hook(Box::new(move |info| {
+            let _ = disable_raw_mode();
+            let mut stdout = stdout();
+            let _ = execute!(
+                stdout,
+                LeaveAlternateScreen,
+                cursor::Show,
+                crossterm::terminal::Clear(ClearType::All)
+            );
+            let _ = stdout.flush();
+            original(info);
+        }));
+    });
 }
 
 pub(super) fn board_dimensions(term_w: u16, term_h: u16) -> (u16, u16) {
-    let usable_w = term_w.saturating_sub(nailsnake::ui::SIDEBAR_WIDTH + 8);
-    let usable_h = term_h.saturating_sub(5);
-
-    let width = usable_w.clamp(20, 44);
-    let height = usable_h.clamp(12, 24);
+    // Board coordinates are independent of the terminal viewport.  Select a
+    // conservative logical board once at startup and preserve it on resize.
+    let width = term_w.saturating_sub(8).clamp(20, 40);
+    let height = term_h.saturating_sub(4).clamp(12, 20);
     (width, height)
 }

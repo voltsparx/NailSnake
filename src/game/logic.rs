@@ -1,5 +1,6 @@
 use std::collections::{HashSet, VecDeque};
 
+use anyhow::{bail, Result};
 use rand::{thread_rng, Rng};
 
 use crate::config::Difficulty;
@@ -26,6 +27,32 @@ impl Game {
         random_maze: bool,
         custom_speed_ms: u64,
     ) -> Self {
+        Self::try_with_options(
+            width,
+            height,
+            difficulty,
+            wrap_walls,
+            random_maze,
+            custom_speed_ms,
+        )
+        .expect("game board dimensions must be at least 4x4")
+    }
+
+    pub fn try_with_options(
+        width: u16,
+        height: u16,
+        difficulty: Difficulty,
+        wrap_walls: bool,
+        random_maze: bool,
+        custom_speed_ms: u64,
+    ) -> Result<Self> {
+        if width < super::MIN_BOARD_WIDTH || height < super::MIN_BOARD_HEIGHT {
+            bail!(
+                "game board must be at least {}x{} (got {width}x{height})",
+                super::MIN_BOARD_WIDTH,
+                super::MIN_BOARD_HEIGHT
+            );
+        }
         let mid_x = width / 2;
         let mid_y = height / 2;
         let mut snake = VecDeque::new();
@@ -40,11 +67,12 @@ impl Game {
         });
 
         let mut game = Self {
+            save_version: super::SAVE_VERSION,
             width,
             height,
             snake,
             direction: Direction::Right,
-            pending_direction: Direction::Right,
+            direction_queue: VecDeque::new(),
             food: Point { x: 0, y: 0 },
             score: 0,
             food_eaten: 0,
@@ -58,7 +86,7 @@ impl Game {
         };
         game.generate_maze();
         game.spawn_food();
-        game
+        Ok(game)
     }
 
     pub fn reset(&mut self) {
@@ -72,44 +100,20 @@ impl Game {
         );
     }
 
+    /// Logical board dimensions deliberately do not follow terminal resizes.
+    /// Rendering may clip or show a too-small warning, but a resize must never
+    /// rewrite a live snake, score, maze, or food location.
     pub fn resize(&mut self, width: u16, height: u16) -> bool {
-        if width == self.width && height == self.height {
-            return true;
-        }
-
-        let scale_x = width as f32 / self.width as f32;
-        let scale_y = height as f32 / self.height as f32;
-
-        let remap_point = |p: Point| -> Point {
-            let nx = ((p.x as f32 * scale_x).round() as u16).min(width.saturating_sub(1));
-            let ny = ((p.y as f32 * scale_y).round() as u16).min(height.saturating_sub(1));
-            Point { x: nx, y: ny }
-        };
-
-        let new_snake: VecDeque<Point> = self.snake.iter().map(|p| remap_point(*p)).collect();
-        let new_food = remap_point(self.food);
-        let new_walls: HashSet<Point> = self.walls.iter().map(|p| remap_point(*p)).collect();
-
-        let mut seen = HashSet::new();
-        for p in &new_snake {
-            if !seen.insert(*p) {
-                return false;
-            }
-        }
-        if new_snake.contains(&new_food) || new_walls.contains(&new_food) {
-            return false;
-        }
-
-        self.snake = new_snake;
-        self.food = new_food;
-        self.walls = new_walls;
-        self.width = width;
-        self.height = height;
-        true
+        width == self.width && height == self.height
     }
 
     pub fn is_valid_for_resume(&self) -> bool {
-        if self.width == 0 || self.height == 0 || self.snake.is_empty() {
+        if self.save_version != super::SAVE_VERSION
+            || self.width < super::MIN_BOARD_WIDTH
+            || self.height < super::MIN_BOARD_HEIGHT
+            || self.snake.is_empty()
+            || self.direction_queue.len() > 2
+        {
             return false;
         }
 
@@ -120,13 +124,33 @@ impl Game {
             }
         }
 
+        // A VecDeque may wrap internally; collect only for validation, which
+        // happens on load rather than every frame.
+        let segments: Vec<Point> = self.snake.iter().copied().collect();
+        if !segments
+            .windows(2)
+            .all(|pair| self.points_are_adjacent(pair[0], pair[1]))
+        {
+            return false;
+        }
+
+        let mut effective = self.direction;
+        for queued in &self.direction_queue {
+            if *queued == effective || queued.opposite(effective) {
+                return false;
+            }
+            effective = *queued;
+        }
+
         self.food.x < self.width
             && self.food.y < self.height
             && !seen.contains(&self.food)
-            && self
-                .walls
-                .iter()
-                .all(|point| point.x < self.width && point.y < self.height && !seen.contains(point))
+            && self.walls.iter().all(|point| {
+                point.x < self.width
+                    && point.y < self.height
+                    && !seen.contains(point)
+                    && *point != self.food
+            })
     }
 
     pub fn tick_interval_ms(&self) -> u64 {
@@ -139,10 +163,15 @@ impl Game {
         if self.phase != GamePhase::Running {
             return;
         }
-        if dir.opposite(self.direction) {
+        let effective = self
+            .direction_queue
+            .back()
+            .copied()
+            .unwrap_or(self.direction);
+        if dir == effective || dir.opposite(effective) || self.direction_queue.len() >= 2 {
             return;
         }
-        self.pending_direction = dir;
+        self.direction_queue.push_back(dir);
     }
 
     pub fn toggle_pause(&mut self) {
@@ -158,10 +187,15 @@ impl Game {
             return false;
         }
 
-        self.direction = self.pending_direction;
-        self.tick_count += 1;
+        if let Some(direction) = self.direction_queue.pop_front() {
+            self.direction = direction;
+        }
+        self.tick_count = self.tick_count.saturating_add(1);
 
-        let head = self.snake.front().copied().unwrap();
+        let Some(head) = self.snake.front().copied() else {
+            self.phase = GamePhase::GameOver;
+            return true;
+        };
         let (dx, dy) = self.direction.delta();
         let mut nx = head.x as i16 + dx;
         let mut ny = head.y as i16 + dy;
@@ -210,14 +244,16 @@ impl Game {
         self.snake.push_front(next_point);
 
         if will_grow {
-            self.score += 10 + self.food_eaten;
-            self.food_eaten += 1;
+            self.score = self
+                .score
+                .saturating_add(10u32.saturating_add(self.food_eaten));
+            self.food_eaten = self.food_eaten.saturating_add(1);
             self.spawn_food();
         } else {
             self.snake.pop_back();
         }
 
-        false
+        self.phase == GamePhase::GameOver
     }
 
     fn spawn_food(&mut self) {
@@ -229,7 +265,7 @@ impl Game {
         for y in 0..self.height {
             for x in 0..self.width {
                 let p = Point { x, y };
-                if !snake_set.contains(&p) && !self.walls.contains(&p) {
+                if !snake_set.contains(&p) && !self.walls.contains(&p) && self.is_reachable(p) {
                     empty_count += 1;
                     if rng.gen_range(0..empty_count) == 0 {
                         selected = Some(p);
@@ -261,11 +297,57 @@ impl Game {
                 let p = Point { x, y };
                 let near_start = x.abs_diff(start.x) <= 4 && y.abs_diff(start.y) <= 3;
                 let corridor = x == start.x || y == start.y;
-                let sparse_wall = x % 4 == 0 && y % 3 == 0;
+                let sparse_wall = thread_rng().gen_ratio(1, 11);
                 if sparse_wall && !near_start && !corridor {
                     self.walls.insert(p);
                 }
             }
         }
+    }
+
+    fn is_reachable(&self, target: Point) -> bool {
+        let Some(start) = self.snake.front().copied() else {
+            return false;
+        };
+        let mut visited = HashSet::from([start]);
+        let mut queue = VecDeque::from([start]);
+        while let Some(point) = queue.pop_front() {
+            if point == target {
+                return true;
+            }
+            for direction in [
+                Direction::Up,
+                Direction::Down,
+                Direction::Left,
+                Direction::Right,
+            ] {
+                let (dx, dy) = direction.delta();
+                let x = point.x as i16 + dx;
+                let y = point.y as i16 + dy;
+                if x < 0 || y < 0 || x >= self.width as i16 || y >= self.height as i16 {
+                    continue;
+                }
+                let next = Point {
+                    x: x as u16,
+                    y: y as u16,
+                };
+                if !self.walls.contains(&next) && visited.insert(next) {
+                    queue.push_back(next);
+                }
+            }
+        }
+        false
+    }
+
+    fn points_are_adjacent(&self, first: Point, second: Point) -> bool {
+        let direct = first.x.abs_diff(second.x) + first.y.abs_diff(second.y) == 1;
+        direct
+            || (self.wrap_walls
+                && ((first.y == second.y
+                    && ((first.x == 0 && second.x + 1 == self.width)
+                        || (second.x == 0 && first.x + 1 == self.width)))
+                    || (first.x == second.x
+                        && ((first.y == 0 && second.y + 1 == self.height)
+                            || (second.y == 0 && first.y + 1 == self.height)))))
     }
 }
