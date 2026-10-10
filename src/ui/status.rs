@@ -20,6 +20,7 @@ pub fn render_status_bar(
         GamePhase::Running => "Playing",
         GamePhase::Paused => "Paused",
         GamePhase::GameOver => "Dead",
+        GamePhase::Won => "Won",
         GamePhase::Menu => "Press Enter",
     };
 

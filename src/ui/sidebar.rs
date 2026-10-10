@@ -72,6 +72,7 @@ fn render_session(
         GamePhase::Running => "Running",
         GamePhase::Paused => "Paused",
         GamePhase::GameOver => "Game Over",
+        GamePhase::Won => "Won",
         GamePhase::Menu => "Ready",
     };
 

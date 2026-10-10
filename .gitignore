@@ -20,6 +20,7 @@ build-scripts/test-root/
 *~
 .DS_Store
 Thumbs.db
+dist/
 audit/
 
 # OS clutter

@@ -10,6 +10,7 @@ $DisplayName = "NailSnake"
 $RootDir = Resolve-Path (Join-Path $PSScriptRoot "..")
 $CargoToml = Join-Path $RootDir "Cargo.toml"
 $ExePath = Join-Path $RootDir "target\release-installer\nailsnake.exe"
+$MinRustMinor = 88
 
 function Get-CargoVersion {
     param([string]$ManifestPath)
@@ -54,18 +55,44 @@ function Test-Admin {
 
 function Restart-AsAdmin {
     param([string]$RequestedScope)
-    $args = @(
+    $argList = @(
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
         "-File", "`"$PSCommandPath`"",
         "-Scope", $RequestedScope
     )
-    Start-Process -FilePath "powershell.exe" -ArgumentList $args -Verb RunAs
+    Start-Process -FilePath "powershell.exe" -ArgumentList $argList -Verb RunAs -Wait
+}
+
+function Test-RustToolchain {
+    if ($null -eq (Get-Command rustc -ErrorAction SilentlyContinue)) {
+        return $false
+    }
+    $version = (& rustc --version)
+    if ($version -notmatch 'rustc (\d+)\.(\d+)\.(\d+)') {
+        return $false
+    }
+    $major = [int]$Matches[1]
+    $minor = [int]$Matches[2]
+    return $major -gt 1 -or ($major -eq 1 -and $minor -ge $MinRustMinor)
 }
 
 if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
     throw "cargo is required. Install Rust from https://rustup.rs/ and run this script again."
 }
+
+if (-not (Test-RustToolchain)) {
+    if ($null -eq (Get-Command rustup -ErrorAction SilentlyContinue)) {
+        throw "NailSnake requires Rust 1.$MinRustMinor or newer. Install Rust from https://rustup.rs/ and re-run this script."
+    }
+    Write-Host "NailSnake requires Rust 1.$MinRustMinor+; installing rustup stable..."
+    rustup toolchain install stable
+    $env:RUSTUP_TOOLCHAIN = "stable"
+    if (-not (Test-RustToolchain)) {
+        throw "The installed Rust toolchain is still too old."
+    }
+}
+Write-Host "Rust toolchain: $(& rustc --version)"
 
 if ($Scope -eq "Prompt") {
     $Scope = Ask-Choice `
@@ -84,6 +111,9 @@ Write-Host "Building $DisplayName release binary..."
 Write-Host "This may take a while on first run. (profile: release-installer)"
 Push-Location $RootDir
 try {
+    $env:CARGO_TERM_VERBOSE = "true"
+    $env:CARGO_TERM_PROGRESS_WHEN = "always"
+    $env:CARGO_TERM_PROGRESS_WIDTH = "80"
     cargo build --profile release-installer --locked --verbose
 } finally {
     Pop-Location

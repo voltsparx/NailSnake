@@ -13,7 +13,7 @@ sha256sums=()
 
 build() {
     cd "$startdir"
-    cargo build --profile release-installer --locked --verbose
+    CARGO_TERM_VERBOSE=true cargo build --profile release-installer --locked --verbose
 }
 
 check() {

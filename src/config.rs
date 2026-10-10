@@ -85,6 +85,7 @@ pub struct PersistedStats {
 }
 
 pub const SETTINGS_VERSION: u32 = 1;
+const MAX_ACTIVE_GAME_BYTES: u64 = 1_000_000;
 
 /// Stable, human-readable representation of the five configurable bindings.
 /// Crossterm's `KeyCode` is intentionally not serialized directly.
@@ -235,6 +236,21 @@ impl GameConfig {
             return Ok(None);
         }
 
+        let size = fs::metadata(&self.session_path)
+            .with_context(|| {
+                format!(
+                    "reading saved game metadata from {}",
+                    self.session_path.display()
+                )
+            })?
+            .len();
+        if size > MAX_ACTIVE_GAME_BYTES {
+            anyhow::bail!(
+                "saved game at {} is too large ({size} bytes; limit is {MAX_ACTIVE_GAME_BYTES})",
+                self.session_path.display()
+            );
+        }
+
         let data = fs::read_to_string(&self.session_path)
             .with_context(|| format!("reading saved game from {}", self.session_path.display()))?;
         let mut game: Game = match serde_json::from_str(&data) {
@@ -245,7 +261,7 @@ impl GameConfig {
             }
         };
 
-        if !game.is_valid_for_resume() || game.phase == GamePhase::GameOver {
+        if !game.is_valid_for_resume() {
             let _ = self.clear_active_game();
             return Ok(None);
         }
@@ -257,7 +273,7 @@ impl GameConfig {
     }
 
     pub fn save_active_game(&self, game: &Game) -> Result<()> {
-        if game.phase == GamePhase::GameOver || !game.is_valid_for_resume() {
+        if !game.is_valid_for_resume() {
             return self.clear_active_game();
         }
 

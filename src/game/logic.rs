@@ -111,9 +111,17 @@ impl Game {
         if self.save_version != super::SAVE_VERSION
             || self.width < super::MIN_BOARD_WIDTH
             || self.height < super::MIN_BOARD_HEIGHT
+            || self.width > super::MAX_BOARD_WIDTH
+            || self.height > super::MAX_BOARD_HEIGHT
             || self.snake.is_empty()
             || self.direction_queue.len() > 2
+            || !matches!(self.phase, GamePhase::Running | GamePhase::Paused)
         {
+            return false;
+        }
+
+        let cells = self.width as usize * self.height as usize;
+        if self.snake.len() > cells || self.walls.len() > cells.saturating_sub(self.snake.len()) {
             return false;
         }
 
@@ -248,15 +256,19 @@ impl Game {
                 .score
                 .saturating_add(10u32.saturating_add(self.food_eaten));
             self.food_eaten = self.food_eaten.saturating_add(1);
-            self.spawn_food();
+            if !self.spawn_food() {
+                return true;
+            }
         } else {
             self.snake.pop_back();
         }
 
-        self.phase == GamePhase::GameOver
+        false
     }
 
-    fn spawn_food(&mut self) {
+    /// Returns whether an empty reachable cell was available for the next
+    /// food.  No such cell means the player filled every reachable cell.
+    fn spawn_food(&mut self) -> bool {
         let snake_set: HashSet<Point> = self.snake.iter().copied().collect();
         let mut rng = thread_rng();
         let mut selected = None;
@@ -276,8 +288,10 @@ impl Game {
 
         if let Some(food) = selected {
             self.food = food;
+            true
         } else {
-            self.phase = GamePhase::GameOver;
+            self.phase = GamePhase::Won;
+            false
         }
     }
 

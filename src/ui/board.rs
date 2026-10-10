@@ -10,6 +10,13 @@ use crate::theme::Theme;
 use super::layout::inset;
 use super::skins::snake_glyph;
 
+const CELL_WIDTH: u16 = 2;
+
+pub fn board_fits(game: &Game, area: Rect) -> bool {
+    area.width >= game.width.saturating_mul(CELL_WIDTH).saturating_add(2)
+        && area.height >= game.height.saturating_add(2)
+}
+
 pub fn render_board(
     frame: &mut Frame,
     game: &Game,
@@ -18,12 +25,23 @@ pub fn render_board(
     show_grid: bool,
     skin: SnakeSkin,
 ) {
-    let inner = inset(area, 1);
+    // Terminal characters are roughly twice as tall as wide. Two columns per
+    // logical cell make vertical and horizontal movement look equally fast.
+    let cell_w = CELL_WIDTH;
+    let cell_h = 1;
+    // The frame is the physical game boundary. Keeping it snug around the
+    // logical board ensures a solid-wall collision is always visible.
+    let frame_width = game.width.saturating_mul(cell_w).saturating_add(2);
+    let frame_height = game.height.saturating_mul(cell_h).saturating_add(2);
+    let board_area = Rect {
+        x: area.x + area.width.saturating_sub(frame_width.min(area.width)) / 2,
+        y: area.y + area.height.saturating_sub(frame_height.min(area.height)) / 2,
+        width: frame_width.min(area.width),
+        height: frame_height.min(area.height),
+    };
+    let inner = inset(board_area, 1);
     let board_w = inner.width;
     let board_h = inner.height;
-
-    let cell_w = 1;
-    let cell_h = 1;
 
     let used_w = game.width * cell_w;
     let used_h = game.height * cell_h;
@@ -36,7 +54,7 @@ pub fn render_board(
         .title(Span::styled(" NailSnake ", theme.title))
         .title_alignment(Alignment::Center);
 
-    frame.render_widget(block, area);
+    frame.render_widget(block, board_area);
 
     if show_grid {
         draw_grid(
@@ -73,13 +91,13 @@ pub fn render_board(
             continue;
         }
         draw_cell(
-            frame, offset_x, offset_y, *wall, cell_w, cell_h, theme.wall, "X",
+            frame, offset_x, offset_y, *wall, cell_w, cell_h, theme.wall, "XX",
         );
     }
 
     if game.food.x < game.width && game.food.y < game.height {
         draw_cell(
-            frame, offset_x, offset_y, game.food, cell_w, cell_h, theme.food, "*",
+            frame, offset_x, offset_y, game.food, cell_w, cell_h, theme.food, "**",
         );
     }
 }
@@ -98,7 +116,7 @@ fn draw_grid(
     for y in 0..gh {
         for x in 0..gw {
             let rect = cell_rect(ox, oy, Point { x, y }, cw, ch);
-            let dot = Paragraph::new(".").style(theme.grid);
+            let dot = Paragraph::new("..").style(theme.grid);
             frame.render_widget(dot, rect);
         }
     }

@@ -1,5 +1,6 @@
 use anyhow::Result;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use ratatui::layout::Rect;
 
 use super::key_bindings::{action_label, Action, KeyBindings};
 use super::menu_state::{
@@ -20,21 +21,42 @@ enum MainMenuAction {
 }
 
 impl App {
-    pub(super) fn handle_resize(&mut self, _width: u16, _height: u16) -> Result<()> {
+    pub(super) fn handle_resize(&mut self, width: u16, height: u16) -> Result<()> {
         // Terminal dimensions are a viewport concern.  The logical board never
         // changes here, so a too-small resize cannot erase a live game.
+        let areas = nailsnake::ui::compute_layout(Rect::new(0, 0, width, height));
+        if !nailsnake::ui::board_fits(&self.game, areas.board)
+            && self.game.phase == GamePhase::Running
+        {
+            self.pause_game();
+            self.notice = Some("Terminal too small; game paused until it fits again.".into());
+        }
         self.terminal.clear()?;
         Ok(())
     }
 
     pub(super) fn handle_key(&mut self, key: KeyEvent) -> Result<bool> {
+        if key.kind == KeyEventKind::Release {
+            return Ok(false);
+        }
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             return Ok(true);
+        }
+        let action = self.keys.action_for(key.code);
+
+        // Repeated movement is useful, but repeated toggles such as Pause or
+        // Confirm make held keys flicker through screens on several terminals.
+        if key.kind == KeyEventKind::Repeat
+            && !matches!(
+                action,
+                Some(Action::Up | Action::Down | Action::Left | Action::Right)
+            )
+        {
+            return Ok(false);
         }
         if let Some(capture) = self.capture_key {
             return self.handle_capture(capture, key);
         }
-        let action = self.keys.action_for(key.code);
 
         if self.show_help {
             if matches!(action, Some(Action::Back | Action::Confirm | Action::Help)) {
@@ -50,7 +72,7 @@ impl App {
         match self.game.phase {
             GamePhase::Menu => self.handle_main_menu_action(action),
             GamePhase::Paused => self.handle_pause_action(action),
-            GamePhase::GameOver => self.handle_game_over_action(action),
+            GamePhase::GameOver | GamePhase::Won => self.handle_game_over_action(action),
             GamePhase::Running => self.handle_running_action(action),
         }
     }
@@ -84,7 +106,12 @@ impl App {
         match action {
             Some(Action::Back | Action::Pause | Action::Quit) => self.pause_game(),
             Some(Action::Restart) => self.restart_game(),
-            Some(Action::Help) => self.show_help = true,
+            Some(Action::Help) => {
+                // Help is a modal view. Pause first so opening it never leaves
+                // an invisible, still-moving game underneath the modal.
+                self.pause_game();
+                self.show_help = true;
+            }
             Some(Action::Up) => self.game.set_direction(Direction::Up),
             Some(Action::Down) => self.game.set_direction(Direction::Down),
             Some(Action::Left) => self.game.set_direction(Direction::Left),

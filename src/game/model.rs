@@ -44,6 +44,7 @@ pub enum GamePhase {
     Running,
     Paused,
     GameOver,
+    Won,
     Menu,
 }
 
@@ -52,6 +53,10 @@ pub enum GamePhase {
 pub const SAVE_VERSION: u32 = 1;
 pub const MIN_BOARD_WIDTH: u16 = 4;
 pub const MIN_BOARD_HEIGHT: u16 = 4;
+/// Resume files are user-editable.  Keep their dimensions bounded so a
+/// malformed file cannot turn rendering into an enormous allocation/workload.
+pub const MAX_BOARD_WIDTH: u16 = 120;
+pub const MAX_BOARD_HEIGHT: u16 = 60;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Game {

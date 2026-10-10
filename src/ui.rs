@@ -14,6 +14,7 @@ use crate::config::{GameConfig, SnakeSkin};
 use crate::game::{Game, GamePhase};
 use crate::theme::{ColorMode, Theme};
 
+pub use board::board_fits;
 pub use layout::compute_layout;
 pub use model::{LayoutMode, MenuView, SIDEBAR_WIDTH};
 
@@ -31,13 +32,13 @@ pub fn render(
 ) {
     let areas = compute_layout(frame.area());
 
-    if areas.mode == LayoutMode::TooSmall {
+    if areas.mode == LayoutMode::TooSmall || !board_fits(game, areas.board) {
         overlay::render_overlay(
             frame,
             frame.area(),
             theme,
             " TERMINAL TOO SMALL ",
-            "Resize to at least 50 columns by 18 rows. Your game is preserved.",
+            "Resize to fit the board. Your game is preserved and paused.",
             theme.paused,
         );
         return;
@@ -83,14 +84,28 @@ pub fn render(
                 menu::render_menu_panel(frame, areas.board, menu_view, theme, 62, 54);
             }
         }
-        GamePhase::GameOver => overlay::render_overlay(
-            frame,
-            areas.board,
-            theme,
-            " GAME OVER ",
-            "R/Enter restart  |  Esc/Q main menu",
-            theme.game_over,
-        ),
+        GamePhase::GameOver | GamePhase::Won => {
+            if let Some(menu_view) = menu_view {
+                // Help opened after a game ends must remain visible instead of
+                // being swallowed by the result overlay.
+                menu::render_menu_panel(frame, areas.board, menu_view, theme, 62, 54);
+            } else {
+                let (title, subtitle, style) = if game.phase == GamePhase::Won {
+                    (
+                        " YOU WIN! ",
+                        "Board cleared! R/Enter restart  |  Esc/Q main menu",
+                        theme.score_high,
+                    )
+                } else {
+                    (
+                        " GAME OVER ",
+                        "R/Enter restart  |  Esc/Q main menu",
+                        theme.game_over,
+                    )
+                };
+                overlay::render_overlay(frame, areas.board, theme, title, subtitle, style);
+            }
+        }
         GamePhase::Menu | GamePhase::Running => {}
     }
 }

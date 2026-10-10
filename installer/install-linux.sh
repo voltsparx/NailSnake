@@ -8,6 +8,7 @@ ROOT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 VERSION=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' "$ROOT_DIR/Cargo.toml" | head -n 1)
 DIST_DIR="$ROOT_DIR/dist"
 STAGE_DIR="$DIST_DIR/stage-linux"
+MIN_RUST_MINOR=88
 
 say() {
     printf '%s\n' "$*"
@@ -18,7 +19,7 @@ ask_yes_no() {
     default=${2:-n}
     if [ "$default" = "y" ]; then suffix="[Y/n]"; else suffix="[y/N]"; fi
     printf '%s %s ' "$prompt" "$suffix"
-    read -r answer
+    read -r answer || answer=""
     answer=${answer:-$default}
     case "$answer" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }
@@ -64,12 +65,46 @@ detect_package_manager() {
 
 missing_common_tools() {
     missing=""
-    for cmd in cargo git tar gzip awk; do
+    for cmd in cargo rustc git tar gzip awk; do
         if ! need_cmd "$cmd"; then
             missing="$missing $cmd"
         fi
     done
     printf '%s' "$missing"
+}
+
+rust_toolchain_ok() {
+    need_cmd cargo && need_cmd rustc || return 1
+    version=$(rustc --version | awk '{print $2}')
+    major=$(printf '%s' "$version" | awk -F. '{print $1}')
+    minor=$(printf '%s' "$version" | awk -F. '{print $2}')
+    [ "${major:-0}" -gt 1 ] || { [ "${major:-0}" -eq 1 ] && [ "${minor:-0}" -ge "$MIN_RUST_MINOR" ]; }
+}
+
+ensure_rust_toolchain() {
+    if rust_toolchain_ok; then
+        say "Rust toolchain: $(rustc --version)"
+        return 0
+    fi
+
+    say "NailSnake requires Rust 1.$MIN_RUST_MINOR or newer."
+    if need_cmd rustup; then
+        say "Updating the rustup stable toolchain..."
+        rustup toolchain install stable
+        export RUSTUP_TOOLCHAIN=stable
+    elif need_cmd curl && ask_yes_no "Install the current Rust toolchain with rustup?" "y"; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+        # shellcheck disable=SC1090
+        . "$HOME/.cargo/env"
+        rustup toolchain install stable
+        export RUSTUP_TOOLCHAIN=stable
+    else
+        say "Install Rust 1.$MIN_RUST_MINOR+ from https://rustup.rs/ and re-run this installer."
+        return 1
+    fi
+
+    rust_toolchain_ok || { say "The installed Rust toolchain is still too old."; return 1; }
+    say "Rust toolchain: $(rustc --version)"
 }
 
 missing_format_tools() {
@@ -115,7 +150,7 @@ install_prerequisites() {
             sudo_cmd apt-get install -y build-essential cargo git tar gzip dpkg-dev
             ;;
         pacman)
-            sudo_cmd pacman -Sy --needed base-devel rust cargo git tar gzip
+            sudo_cmd pacman -S --needed base-devel rust cargo git tar gzip
             ;;
         dnf)
             sudo_cmd dnf install -y gcc gcc-c++ make cargo git tar gzip rpm-build
@@ -154,7 +189,8 @@ prepare_stage() {
 build_binary() {
     say "Building $DISPLAY_NAME release binary..."
     cd "$ROOT_DIR"
-    cargo build --profile release-installer --locked --verbose
+    CARGO_TERM_VERBOSE=true CARGO_TERM_PROGRESS_WHEN=always CARGO_TERM_PROGRESS_WIDTH=80 \
+        cargo build --profile release-installer --locked --verbose
 }
 
 build_arch_package() {
@@ -211,7 +247,8 @@ rich terminal colors, and a manual page.
 %autosetup
 
 %build
-cargo build --profile release-installer --locked --verbose
+CARGO_TERM_VERBOSE=true CARGO_TERM_PROGRESS_WHEN=always CARGO_TERM_PROGRESS_WIDTH=80 \
+    cargo build --profile release-installer --locked --verbose
 
 %install
 install -Dm755 target/release-installer/$APP_NAME %{buildroot}%{_bindir}/$APP_NAME
@@ -291,7 +328,7 @@ choose_format() {
     say "  5) xbps          Void Linux"
     say "  6) tar.gz        generic fallback"
     printf 'Selection [recommended: %s]: ' "$FORMAT"
-    read -r choice
+    read -r choice || choice=""
     case "${choice:-$FORMAT}" in
         1) printf '%s' "$FORMAT" ;;
         2|deb) printf '%s' "deb" ;;
@@ -316,6 +353,7 @@ main() {
 
     kind=$(choose_format)
     install_prerequisites "$kind"
+    ensure_rust_toolchain
     say ""
     say "Building $DISPLAY_NAME release binary..."
     say "This may take a while on first run. (profile: release-installer)"

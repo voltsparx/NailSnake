@@ -10,7 +10,6 @@ use crate::theme::Theme;
 use super::animation::draw_oxide_rain;
 use super::layout::{centered_rect, inset};
 use super::model::MenuView;
-use super::skins::animated_snake_preview;
 
 pub fn render_main_menu(
     frame: &mut Frame,
@@ -23,31 +22,44 @@ pub fn render_main_menu(
 ) {
     frame.render_widget(Clear, area);
 
-    let outer = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(7),
+    // Keep the menu small and readable, with animation in a separate pane.
+    // This follows nsnake's clear menu/animation separation without copying
+    // its visual design.
+    let has_animation_pane = area.width >= 80 && area.height >= 20;
+
+    let outer_constraints = if has_animation_pane {
+        [
+            Constraint::Length(3),
+            Constraint::Min(8),
+            Constraint::Length(2),
+        ]
+    } else {
+        [
+            Constraint::Length(1),
             Constraint::Min(8),
             Constraint::Length(4),
-        ])
+        ]
+    };
+    let outer = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(outer_constraints)
         .split(inset(area, 1));
 
-    let compact = area.width < 80 || area.height < 24;
-    let main = if compact {
+    let main = if has_animation_pane {
+        Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Min(24), Constraint::Length(28)])
+            .split(outer[1])
+    } else {
         Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(0), Constraint::Min(8)])
             .split(outer[1])
-    } else {
-        Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Min(34), Constraint::Length(30)])
-            .split(outer[1])
     };
 
-    render_logo(frame, outer[0], theme);
+    render_logo(frame, outer[0], theme, true);
     render_menu_panel(frame, main[1], menu, theme, 100, 100);
-    if !compact {
+    if has_animation_pane {
         render_attract_panel(frame, main[0], game, config, theme, frame_tick);
     }
     render_menu_footer(frame, outer[2], theme);
@@ -98,7 +110,16 @@ pub fn render_menu_panel(
     frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
 }
 
-fn render_logo(frame: &mut Frame, area: Rect, theme: &Theme) {
+fn render_logo(frame: &mut Frame, area: Rect, theme: &Theme, compact: bool) {
+    if compact {
+        frame.render_widget(
+            Paragraph::new(Line::from(Span::styled("NAILSNAKE", theme.title)))
+                .alignment(Alignment::Center)
+                .style(theme.menu_text),
+            area,
+        );
+        return;
+    }
     let logo = vec![
         Line::from(Span::styled(
             " _   _       _ _ ____              _        ",
@@ -145,14 +166,15 @@ fn render_attract_panel(
         .style(theme.sidebar);
     let inner = inset(block.inner(area), 1);
     frame.render_widget(block, area);
-    draw_oxide_rain(frame, inner, theme, frame_tick);
-
-    let mut lines = vec![
+    let sections = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(7), Constraint::Min(1)])
+        .split(inner);
+    let lines = vec![
         Line::from(Span::styled(
             "Rust-powered terminal Snake",
             theme.score_high,
         )),
-        Line::from(""),
         Line::from(format!("Difficulty   {}", config.difficulty.label())),
         Line::from(format!(
             "Walls        {}",
@@ -168,26 +190,19 @@ fn render_attract_panel(
         )),
         Line::from(format!("Best score   {}", config.stats.high_score)),
         Line::from(format!("Games played {}", config.stats.games_played)),
-        Line::from(""),
         Line::from(Span::styled(
-            "Eat fast. Turn clean. Never reverse.",
+            format!("Speed {} ms", game.tick_interval_ms()),
             theme.help_key,
         )),
-        Line::from(""),
     ];
-
-    lines.push(Line::from(format!(
-        "Skin         {}",
-        config.snake_skin.label()
-    )));
-    let snake_row = animated_snake_preview(frame_tick, config.snake_skin);
-    lines.push(Line::from(Span::styled(snake_row, theme.snake_body)));
-    lines.push(Line::from(format!(
-        "Tick speed   {} ms",
-        game.tick_interval_ms()
-    )));
-
-    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), inner);
+    frame.render_widget(
+        Paragraph::new(lines)
+            .style(theme.sidebar)
+            .wrap(Wrap { trim: true }),
+        sections[0],
+    );
+    // Animated glyphs get their own lower strip, never a text background.
+    draw_oxide_rain(frame, sections[1], theme, frame_tick);
 }
 
 fn render_menu_footer(frame: &mut Frame, area: Rect, theme: &Theme) {

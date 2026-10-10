@@ -128,3 +128,42 @@ fn resume_rejects_wrong_version_and_round_trips_current_version() {
     invalid.save_version += 1;
     assert!(!invalid.is_valid_for_resume());
 }
+
+#[test]
+fn filling_the_board_reports_a_win() {
+    let mut game = Game::new(4, 4, Difficulty::Normal, false);
+    game.snake = VecDeque::from([
+        Point { x: 2, y: 3 },
+        Point { x: 1, y: 3 },
+        Point { x: 0, y: 3 },
+        Point { x: 0, y: 2 },
+        Point { x: 1, y: 2 },
+        Point { x: 2, y: 2 },
+        Point { x: 3, y: 2 },
+        Point { x: 3, y: 1 },
+        Point { x: 2, y: 1 },
+        Point { x: 1, y: 1 },
+        Point { x: 0, y: 1 },
+        Point { x: 0, y: 0 },
+        Point { x: 1, y: 0 },
+        Point { x: 2, y: 0 },
+        Point { x: 3, y: 0 },
+    ]);
+    game.direction = Direction::Right;
+    game.food = Point { x: 3, y: 3 };
+
+    assert!(game.tick());
+    assert_eq!(game.phase, GamePhase::Won);
+    assert_eq!(game.snake.len(), 16);
+}
+
+#[test]
+fn resume_rejects_oversized_board_and_terminal_phases() {
+    let mut game = Game::new(10, 10, Difficulty::Normal, false);
+    game.width = super::MAX_BOARD_WIDTH + 1;
+    assert!(!game.is_valid_for_resume());
+
+    game = Game::new(10, 10, Difficulty::Normal, false);
+    game.phase = GamePhase::Won;
+    assert!(!game.is_valid_for_resume());
+}

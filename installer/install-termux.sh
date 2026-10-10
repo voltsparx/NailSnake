@@ -8,6 +8,7 @@ VERSION=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' "$ROOT_DIR/Cargo.toml" | head 
 DIST_DIR="$ROOT_DIR/dist"
 STAGE_DIR="$DIST_DIR/termux-stage"
 PACKAGE_PATH="$DIST_DIR/${APP_NAME}-${VERSION}-termux-$(uname -m).tar.gz"
+MIN_RUST_MINOR=88
 
 say() {
     printf '%s\n' "$*"
@@ -18,13 +19,20 @@ ask_yes_no() {
     default=${2:-n}
     if [ "$default" = "y" ]; then suffix="[Y/n]"; else suffix="[y/N]"; fi
     printf '%s %s ' "$prompt" "$suffix"
-    read -r answer
+    read -r answer || answer=""
     answer=${answer:-$default}
     case "$answer" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }
 
 need_cmd() {
     command -v "$1" >/dev/null 2>&1
+}
+
+rust_toolchain_ok() {
+    version=$(rustc --version | awk '{print $2}')
+    major=$(printf '%s' "$version" | awk -F. '{print $1}')
+    minor=$(printf '%s' "$version" | awk -F. '{print $2}')
+    [ "${major:-0}" -gt 1 ] || { [ "${major:-0}" -eq 1 ] && [ "${minor:-0}" -ge "$MIN_RUST_MINOR" ]; }
 }
 
 if [ -z "${PREFIX:-}" ] || [ ! -d "$PREFIX" ] || ! printf '%s' "$PREFIX" | grep -qi termux; then
@@ -44,11 +52,27 @@ if ! need_cmd cargo || ! need_cmd clang || ! need_cmd pkg-config; then
     fi
 fi
 
+if ! rust_toolchain_ok; then
+    say "NailSnake requires Rust 1.$MIN_RUST_MINOR+; updating the Termux Rust package."
+    if ask_yes_no "Upgrade Termux packages now?" "y"; then
+        pkg update -y
+        pkg upgrade -y
+        pkg install -y rust clang pkg-config
+    else
+        say "Update the Termux rust package, then re-run this installer."
+        exit 1
+    fi
+fi
+
+rust_toolchain_ok || { say "The installed Rust toolchain is still too old."; exit 1; }
+say "Rust toolchain: $(rustc --version)"
+
 mkdir -p "$DIST_DIR"
 say "Building $DISPLAY_NAME release binary for Termux..."
 say "This may take a while on first run. (profile: release-installer)"
 cd "$ROOT_DIR"
-cargo build --profile release-installer --locked --verbose
+CARGO_TERM_VERBOSE=true CARGO_TERM_PROGRESS_WHEN=always CARGO_TERM_PROGRESS_WIDTH=80 \
+    cargo build --profile release-installer --locked --verbose
 
 say "Build complete."
 rm -rf "$STAGE_DIR"

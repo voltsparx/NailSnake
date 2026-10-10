@@ -8,7 +8,7 @@ use std::io::Stdout;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
-use crossterm::event::{self, Event};
+use crossterm::event::{self, Event, KeyEventKind};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 
@@ -110,7 +110,9 @@ impl App {
                     break;
                 }
                 match event::read()? {
-                    Event::Key(key) => should_exit |= self.handle_key(key)?,
+                    Event::Key(key) if should_dispatch_key(key) => {
+                        should_exit |= self.handle_key(key)?
+                    }
                     Event::Resize(width, height) => self.handle_resize(width, height)?,
                     _ => {}
                 }
@@ -186,7 +188,7 @@ impl App {
                 self.config.save_active_game(&self.game)?;
                 self.saved_game_available = true;
             }
-            GamePhase::GameOver => {
+            GamePhase::GameOver | GamePhase::Won => {
                 self.config.clear_active_game()?;
                 self.saved_game_available = false;
             }
@@ -220,6 +222,13 @@ impl App {
     }
 }
 
+/// Windows terminals emit a key-release event after every key press. Releases
+/// are never user actions, so dispatching them makes menu movement and toggles
+/// happen twice.
+fn should_dispatch_key(key: crossterm::event::KeyEvent) -> bool {
+    key.kind != KeyEventKind::Release
+}
+
 /// Drop guard restores the terminal even if we exit via `?` or a panic.
 ///
 /// Without this, the user would be left in raw mode with no cursor - a very
@@ -230,5 +239,19 @@ impl Drop for App {
             let _ = restore_terminal(&mut self.terminal);
             self.restored = true;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
+
+    use super::should_dispatch_key;
+
+    #[test]
+    fn key_release_is_not_dispatched() {
+        let mut key = KeyEvent::new(KeyCode::Enter, crossterm::event::KeyModifiers::NONE);
+        key.kind = KeyEventKind::Release;
+        assert!(!should_dispatch_key(key));
     }
 }
